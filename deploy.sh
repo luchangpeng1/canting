@@ -16,7 +16,7 @@ git init
 git add -A
 git commit -m 'deploy'
 
-# 修改为你的 GitHub 用户名和仓库名
-git push -f git@github.com:luchangpeng1/canting.git main:gh-pages
+# 修改为推送到 master 分支
+git push -f git@github.com:luchangpeng1/canting.git master:gh-pages
 
 cd - 
