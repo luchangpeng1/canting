@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import FloorDetail from '@/views/student/FloorDetail.vue'
 
 const routes = [
   {
@@ -66,8 +67,33 @@ const routes = [
       },
       {
         path: 'recommendations',
-        name: 'StudentRecommendations',
-        component: () => import('../views/student/RecommendationSquare.vue')
+        name: 'RecommendationSquare',
+        component: () => import('@/views/student/RecommendationSquare.vue')
+      },
+      {
+        path: '/student/canteen/:canteen/floor/:floor',
+        name: 'FloorDetail',
+        component: FloorDetail
+      },
+      {
+        path: 'dishes/:id',
+        name: 'DishDetail',
+        component: () => import('../views/student/DishDetail.vue')
+      },
+      {
+        path: 'order-history',
+        name: 'OrderHistory',
+        component: () => import('../views/student/OrderHistory.vue')
+      },
+      {
+        path: 'orders/:id',
+        name: 'OrderDetail',
+        component: () => import('../views/student/OrderDetail.vue')
+      },
+      {
+        path: 'cart',
+        name: 'StudentCart',
+        component: () => import('../views/student/CartPage.vue')
       }
     ]
   },

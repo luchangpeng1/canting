@@ -16,7 +16,7 @@ git init
 git add -A
 git commit -m 'deploy'
 
-# 修改为推送到 master 分支
-git push -f git@github.com:luchangpeng1/canting.git master:gh-pages
+# 使用 HTTPS 地址
+git push -f https://github.com/luchangpeng1/canting.git main:gh-pages
 
 cd - 

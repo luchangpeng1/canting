@@ -1,5 +1,15 @@
 <template>
   <div class="dish-list">
+    <!-- 添加悬浮购物车按钮 - 移到最外层 -->
+    <div class="floating-cart-button" 
+         @click="goToCart">
+      <el-badge :value="totalCount" :max="99" class="cart-badge">
+        <el-button type="primary" circle class="cart-button">
+          <el-icon><ShoppingCart /></el-icon>
+        </el-button>
+      </el-badge>
+    </div>
+    
     <!-- 添加3D地图组件 -->
     <CampusMap3D 
       :canteens="mapCanteens"
@@ -34,13 +44,6 @@
                   </el-tag>
                 </div>
               </div>
-              <el-button 
-                type="primary" 
-                @click="viewFloorPlan"
-                v-if="selectedCanteen">
-                <el-icon><Location /></el-icon>
-                查看平面图
-              </el-button>
             </div>
             <div class="canteen-details">
               <p><el-icon><Timer /></el-icon> 营业时间：10:30-13:30, 16:30-19:00</p>
@@ -48,8 +51,162 @@
             </div>
           </el-card>
 
+          <!-- 添加餐厅级别的搜索过滤控制栏 -->
+          <el-card class="filter-card">
+            <div class="filter-controls">
+              <el-input
+                v-model="searchQuery"
+                placeholder="搜索菜品"
+                class="filter-item"
+                clearable
+                @input="handleSearch">
+                <template #prefix>
+                  <el-icon><Search /></el-icon>
+                </template>
+              </el-input>
+
+              <el-select
+                v-model="selectedTaste"
+                placeholder="选择口味"
+                clearable
+                class="filter-item"
+                @change="handleFilter">
+                <el-option
+                  label="全部口味"
+                  value="">
+                </el-option>
+                <el-option
+                  v-for="taste in tasteOptions"
+                  :key="taste.value"
+                  :label="taste.label"
+                  :value="taste.value"
+                />
+              </el-select>
+
+              <el-select
+                v-model="sortOption"
+                placeholder="排序方式"
+                class="filter-item"
+                @change="handleSort">
+                <el-option 
+                  label="全部"
+                  value="">
+                </el-option>
+                <el-option label="默认排序" value="default" />
+                <el-option label="价格从低到高" value="price-asc" />
+                <el-option label="价格从高到低" value="price-desc" />
+                <el-option label="销量从高到低" value="sales-desc" />
+                <el-option label="销量从低到高" value="sales-asc" />
+              </el-select>
+
+              <el-button 
+                type="primary" 
+                @click="resetFilters"
+                class="filter-item">
+                重置筛选
+              </el-button>
+            </div>
+          </el-card>
+
           <!-- 窗口分类展示 -->
           <div class="window-navigation">
+            <!-- 添加购物车抽屉 -->
+            <el-drawer
+              v-model="cartDrawerVisible"
+              title="购物车"
+              direction="rtl"
+              size="380px"
+              :show-close="true"
+              class="cart-drawer">
+              <template #header>
+                <div class="cart-drawer-header">
+                  <h3>购物车</h3>
+                  <el-button 
+                    type="danger" 
+                    plain 
+                    size="small" 
+                    @click="clearCart" 
+                    v-if="cartItems.length > 0">
+                    清空购物车
+                  </el-button>
+                </div>
+              </template>
+              
+              <div class="cart-drawer-content">
+                <template v-if="hasCartItems">
+                  <!-- 按窗口分组显示购物车商品 -->
+                  <div v-for="(items, windowId) in groupedCartItems" 
+                       :key="windowId" 
+                       class="cart-window-group">
+                    <div class="cart-window-header">
+                      <el-tag size="small">{{ getWindowName(windowId) }}</el-tag>
+                      <el-button 
+                        type="danger" 
+                        plain 
+                        size="small" 
+                        @click="clearWindowCart(windowId)">
+                        清空
+                      </el-button>
+                    </div>
+                    
+                    <div class="cart-items-list">
+                      <div v-for="item in items" 
+                           :key="item.id" 
+                           class="cart-item">
+                        <el-image 
+                          :src="item.image_url" 
+                          class="cart-item-image"
+                          fit="cover">
+                          <template #error>
+                            <div class="image-placeholder">
+                              <el-icon><Picture /></el-icon>
+                            </div>
+                          </template>
+                        </el-image>
+                        
+                        <div class="cart-item-info">
+                          <div class="cart-item-name">{{ item.name }}</div>
+                          <div class="cart-item-price">¥{{ (item.price * item.quantity).toFixed(2) }}</div>
+                        </div>
+                        
+                        <div class="cart-item-actions">
+                          <el-input-number 
+                            v-model="item.quantity" 
+                            :min="0" 
+                            :max="item.stock"
+                            size="small"
+                            @change="handleQuantityChange(item, windowId)"
+                            controls-position="right">
+                          </el-input-number>
+                        </div>
+                      </div>
+                      <!-- 每个窗口的小计和结算按钮 -->
+                      <div class="window-cart-footer">
+                        <div class="window-total-info">
+                          <span class="total-label">小计:</span>
+                          <span class="total-price">¥{{ getWindowTotal(items).toFixed(2) }}</span>
+                        </div>
+                        <el-button 
+                          type="primary" 
+                          size="small"
+                          @click="goToCheckout(windowId)">
+                          结算 ({{ getWindowCount(items) }}件)
+                        </el-button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                
+                <div v-else class="empty-cart">
+                  <el-empty description="购物车是空的">
+                    <template #image>
+                      <el-icon :size="60" class="empty-cart-icon"><ShoppingCart /></el-icon>
+                    </template>
+                  </el-empty>
+                </div>
+              </div>
+            </el-drawer>
+
             <!-- 楼层导航 -->
             <div class="nav-section floor-nav">
               <div class="nav-list">
@@ -58,54 +215,270 @@
                   :key="floor"
                   class="nav-item"
                   :class="{ active: selectedFloor === floor }"
-                  @click="selectFloor(floor)">
+                  @click="toggleFloor(floor)">
                   {{ floor }}层
                 </div>
               </div>
             </div>
-            
-            <!-- 窗口导航 -->
-            <div class="nav-section window-nav" v-if="selectedFloor">
-              <div class="nav-label">窗口：</div>
-              <div class="nav-list">
-                <div class="windows-grid">
-                  <div
-                    v-for="window in displayWindows"
-                    :key="window.id"
-                    class="window-grid-item"
-                    :class="{ active: selectedWindow?.id === window.id }"
-                    @click="selectWindow(window)"
-                  >
-                    <div class="window-grid-content">
-                      <div class="window-header">
-                        <span class="window-name">{{ window.name }}</span>
+
+            <!-- 全部菜品展示区域 -->
+            <div v-if="!selectedFloor" class="all-dishes-container">
+              <div class="dishes-grid">
+                <div v-for="dish in finalFilteredAllDishes" 
+                     :key="dish.id" 
+                     class="dish-card"
+                     @click="goToDishDetail(dish.id)">
+                  <!-- 使用现有的菜品卡片样式 -->
+                  <div class="dish-card-content">
+                    <el-image :src="dish.image_url" class="dish-image" fit="cover">
+                      <template #error>
+                        <div class="image-placeholder">
+                          <el-icon><Picture /></el-icon>
+                        </div>
+                      </template>
+                    </el-image>
+                    
+                    <div class="dish-info">
+                      <div class="dish-header">
+                        <div class="dish-title">
+                          <h4 class="dish-name">{{ dish.name }}</h4>
+                          <div class="dish-window-info">
+                            <el-tag size="small" effect="plain" type="info">
+                              {{ dish.windowName }} · {{ getFloorByWindowId(dish.windowId) }}层
+                            </el-tag>
+                          </div>
+                        </div>
                         <el-tag 
-                          size="small"
-                          :type="isWindowOpen(window) ? 'success' : 'info'">
-                          {{ isWindowOpen(window) ? '营业中' : '已打烊' }}
+                          size="small" 
+                          :type="getCategoryType(dish.category)">
+                          {{ dish.category }}
                         </el-tag>
                       </div>
-                      <div class="window-content">
-                        <div class="window-info">
-                          <el-icon><Timer /></el-icon>
-                          {{ window.operatingHours }}
+                      
+                      <p class="dish-description">{{ dish.description }}</p>
+                      
+                      <div class="dish-tags">
+                        <el-tag size="small" effect="plain" :type="getTasteTagType(dish.taste)">
+                          {{ getTasteLabel(dish.taste) }}
+                        </el-tag>
+                        <el-tag size="small" effect="plain" :type="dish.stock > 0 ? 'success' : 'danger'">
+                          {{ dish.stock > 0 ? `库存: ${dish.stock}` : '已售罄' }}
+                        </el-tag>
+                        <el-tag size="small" effect="plain" type="warning">
+                          周销量: {{ dish.weekSales }}
+                        </el-tag>
+                      </div>
+
+                      <div class="dish-footer">
+                        <div class="price-info">
+                          <span class="price-symbol">¥</span>
+                          <span class="price-value">{{ dish.price.toFixed(2) }}</span>
                         </div>
-                        <div class="window-info">
-                          今日供应 {{ getWindowDishCount(window.id) }} 个菜品
-                        </div>
+                        <el-button 
+                          type="primary" 
+                          size="small" 
+                          class="add-button"
+                          :disabled="dish.stock === 0"
+                          @click.stop="addToCart(dish)">
+                          <el-icon><Plus /></el-icon>
+                        </el-button>
                       </div>
                     </div>
                   </div>
                 </div>
-                <!-- 分页器 -->
-                <div class="pagination-wrapper" v-if="totalPages > 1">
-                  <el-pagination
-                    v-model:current-page="currentPage"
-                    :page-size="pageSize"
-                    :total="totalWindows"
-                    layout="prev, pager, next"
-                    @current-change="handlePageChange"
-                  />
+              </div>
+            </div>
+
+            <!-- 原有的按楼层展示窗口和菜品的部��� -->
+            <div v-else class="meituan-layout">
+              <!-- 左侧窗口列表 -->
+              <div class="window-list">
+                <div
+                  v-for="window in getFloorWindows(activeCanteen, selectedFloor)"
+                  :key="window.id"
+                  class="window-item"
+                  :class="{ active: selectedWindow?.id === window.id }"
+                  @click="selectWindow(window)"
+                >
+                  <div class="window-info">
+                    <div class="window-name">{{ window.name }}</div>
+                    <div class="window-status" :class="{ closed: !isWindowOpen(window) }">
+                      {{ isWindowOpen(window) ? '营业中' : '已打烊' }}
+                    </div>
+                    <div class="window-hours">{{ window.operatingHours }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 右侧内容区域 -->
+              <div class="dishes-container">
+                <!-- 菜品列表 -->
+                <div class="dishes-list">
+                  <template v-if="selectedWindow">
+                    <div v-if="isWindowOpen(selectedWindow)">
+                      <!-- 添加窗口信息卡片 -->
+                      <el-card class="window-info-card">
+                        <div class="window-header">
+                          <h3>{{ selectedWindow.name }}</h3>
+                          <div class="window-tags">
+                            <el-tag size="small" type="success">营业中</el-tag>
+                            <el-tag size="small" type="info">{{ selectedWindow.operatingHours }}</el-tag>
+                          </div>
+                        </div>
+                      </el-card>
+
+                      <!-- 优化搜索过滤栏 -->
+                      <div class="window-filter-controls">
+                        <el-input
+                          v-model="windowSearchQuery"
+                          placeholder="搜索当前窗口菜品"
+                          class="filter-item"
+                          clearable
+                          @input="handleWindowSearch">
+                          <template #prefix>
+                            <el-icon><Search /></el-icon>
+                          </template>
+                        </el-input>
+                        
+                        <!-- 添加口味筛选 -->
+                        <el-select
+                          v-model="selectedTaste"
+                          placeholder="选择口味"
+                          clearable
+                          class="filter-item"
+                          @change="handleFilter">
+                          <el-option
+                            v-for="taste in tasteOptions"
+                            :key="taste.value"
+                            :label="taste.label"
+                            :value="taste.value"
+                          />
+                        </el-select>
+                        
+                        <!-- 排序选项 -->
+                        <el-select
+                          v-model="sortOption"
+                          placeholder="排序方式"
+                          class="filter-item"
+                          @change="handleSort">
+                          <el-option 
+                            label="全部"
+                            value="">
+                          </el-option>
+                          <el-option label="默认排序" value="default" />
+                          <el-option label="价格从���到高" value="price-asc" />
+                          <el-option label="价格从高到低" value="price-desc" />
+                          <el-option label="销量从高到低" value="sales-desc" />
+                          <el-option label="销量从低到高" value="sales-asc" />
+                        </el-select>
+                      </div>
+
+                      <!-- 添加分类标签导航 -->
+                      <div class="category-nav">
+                        <el-tag
+                          v-for="category in dishCategories"
+                          :key="category"
+                          :type="selectedCategory === category ? 'primary' : 'info'"
+                          effect="plain"
+                          class="category-tag"
+                          @click="selectCategory(category)">
+                          {{ category }}
+                        </el-tag>
+                      </div>
+
+                      <!-- 优化菜品卡片布局 -->
+                      <div class="dishes-grid">
+                        <div v-for="dish in finalFilteredDishes" 
+                             :key="dish.id" 
+                             class="dish-card"
+                             @click="goToDishDetail(dish.id)">
+                          <div class="dish-card-content">
+                            <el-image :src="dish.image_url" class="dish-image" fit="cover">
+                              <template #error>
+                                <div class="image-placeholder">
+                                  <el-icon><Picture /></el-icon>
+                                </div>
+                              </template>
+                            </el-image>
+                            
+                            <div class="dish-info">
+                              <div class="dish-header">
+                                <div class="dish-title">
+                                  <h4 class="dish-name">{{ dish.name }}</h4>
+                                  <div class="dish-window-info">
+                                    <el-tag size="small" effect="plain" type="info">
+                                      {{ dish.windowName }} · {{ getFloorByWindowId(dish.windowId) }}层
+                                    </el-tag>
+                                  </div>
+                                </div>
+                                <el-tag 
+                                  size="small" 
+                                  :type="getCategoryType(dish.category) || 'info'">
+                                  {{ dish.category }}
+                                </el-tag>
+                              </div>
+                              
+                              <p class="dish-description">{{ dish.description }}</p>
+                              
+                              <div class="dish-tags">
+                                <el-tag size="small" effect="plain" :type="getTasteTagType(dish.taste)">
+                                  {{ getTasteLabel(dish.taste) }}
+                                </el-tag>
+                                <el-tag size="small" effect="plain" :type="dish.stock > 0 ? 'success' : 'danger'">
+                                  {{ dish.stock > 0 ? `库存: ${dish.stock}` : '已售罄' }}
+                                </el-tag>
+                                <el-tag size="small" effect="plain" type="warning">
+                                  周销量: {{ dish.weekSales }}
+                                </el-tag>
+                              </div>
+
+                              <div class="dish-footer">
+                                <div class="price-info">
+                                  <span class="price-symbol">¥</span>
+                                  <span class="price-value">{{ dish.price.toFixed(2) }}</span>
+                                </div>
+                                <el-button 
+                                  type="primary" 
+                                  size="small" 
+                                  class="add-button"
+                                  :disabled="dish.stock === 0"
+                                  @click.stop="addToCart(dish)">
+                                  <el-icon><Plus /></el-icon>
+                                </el-button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-else class="window-closed">
+                      <el-empty
+                        description="该窗口暂无菜品"
+                        :image-size="200">
+                        <template #description>
+                          <div class="empty-state-content">
+                            <h3 class="empty-title">{{ selectedWindow.name }}</h3>
+                            <p class="empty-status">{{ isWindowOpen(selectedWindow) ? '营业中' : '已打烊' }}</p>
+                            <p class="empty-hours">营业时间：{{ selectedWindow.operatingHours }}</p>
+                            <p class="empty-hint">建议您选择其他窗口</p>
+                          </div>
+                        </template>
+                        <el-button type="primary" @click="selectedWindow = null">返回选择</el-button>
+                      </el-empty>
+                    </div>
+                  </template>
+                  <div v-else class="no-window-selected">
+                    <el-empty
+                      description="请选择窗口"
+                      :image-size="200">
+                      <template #description>
+                        <div class="empty-state-content">
+                          <p class="empty-hint">从左侧选��您感兴趣的窗口</p>
+                          <p class="empty-sub-hint">当前���层共有 {{ displayWindows.length }} 个窗口可选</p>
+                        </div>
+                      </template>
+                    </el-empty>
+                  </div>
                 </div>
               </div>
             </div>
@@ -114,140 +487,80 @@
       </el-tabs>
     </div>
 
-    <!-- 菜品列表 -->
-    <div class="dishes-container" v-if="selectedWindow">
-      <!-- 顶部导航区域 -->
-      <div class="top-nav">
-        <!-- 楼层导航 -->
-        <div class="nav-row floor-nav">
-          <span class="nav-label">楼层：</span>
-          <div class="nav-items">
-            <div 
-              v-for="floor in canteens.find(c => c.name === activeCanteen)?.floors"
-              :key="floor"
-              class="nav-item"
-              :class="{ active: selectedFloor === floor }"
-              @click="selectFloor(floor)">
-              {{ floor }}层
-            </div>
+    <!-- 结算确认对话框 -->
+    <el-dialog
+      v-model="checkoutDialogVisible"
+      title="确认订单"
+      width="400px">
+      <div class="checkout-content">
+        <div class="checkout-items">
+          <div v-for="item in cartItems" 
+               :key="item.id" 
+               class="checkout-item">
+            <span class="item-name">{{ item.name }}</span>
+            <span class="item-quantity">x{{ item.quantity }}</span>
+            <span class="item-price">¥{{ item.price * item.quantity }}</span>
           </div>
         </div>
         
-        <!-- 窗口导航 -->
-        <div class="nav-row window-nav" v-if="selectedFloor">
-          <span class="nav-label">窗口：</span>
-          <div class="nav-items">
-            <div 
-              v-for="window in getFloorWindows(activeCanteen, selectedFloor)"
-              :key="window.id"
-              class="nav-item"
-              :class="{ active: selectedWindow?.id === window.id }"
-              @click="selectWindow(window)">
-              {{ window.name }}
-            </div>
-          </div>
-        </div>
+        <el-divider></el-divider>
+        
+        <div class="checkout-form">
+          <el-form :model="checkoutForm" :rules="checkoutRules" ref="checkoutFormRef">
+            <el-form-item label="就餐时间" prop="diningTime">
+              <el-time-select
+                v-model="checkoutForm.diningTime"
+                :picker-options="{
+                  start: '10:30',
+                  step: '00:15',
+                  end: '20:00'
+                }"
+                placeholder="选择就餐时间">
+              </el-time-select>
+            </el-form-item>
+            
+            <el-form-item label="就餐方式" prop="diningType">
+              <el-radio-group v-model="checkoutForm.diningType">
+                <el-radio label="dine_in">堂食</el-radio>
+                <el-radio label="take_out">打包</el-radio>
+              </el-radio-group>
+            </el-form-item>
 
-        <!-- 搜索和筛选区域 -->
-        <div class="filter-actions">
-          <el-input
-            v-model="searchQuery"
-            placeholder="搜索菜品"
-            clearable
-            class="search-input">
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
-          <el-select v-model="categoryFilter" placeholder="菜品类别" clearable>
-            <el-option
-              v-for="category in categories"
-              :key="category"
-              :label="category"
-              :value="category">
-            </el-option>
-          </el-select>
-          <el-select v-model="priceSort" placeholder="价格排序">
-            <el-option label="默认排序" value=""></el-option>
-            <el-option label="价格从低到高" value="asc"></el-option>
-            <el-option label="价格从高到低" value="desc"></el-option>
-          </el-select>
+            <el-form-item label="备注" prop="remark">
+              <el-input
+                v-model="checkoutForm.remark"
+                type="textarea"
+                placeholder="请输入备注信息">
+              </el-input>
+            </el-form-item>
+          </el-form>
+        </div>
+        
+        <div class="checkout-total">
+          <span>合计:</span>
+          <span class="total-price">¥{{ totalPrice }}</span>
         </div>
       </div>
-
-      <div class="dishes-content">
-        <!-- 右侧菜品列表 -->
-        <div class="dishes-list full-width">
-          <div 
-            v-for="dish in filteredDishes"
-            :key="dish.id"
-            class="dish-item"
-            @click="showDishDetail(dish)">
-            <div class="dish-image-wrapper">
-              <el-image 
-                :src="dish.image_url"
-                class="dish-img"
-                fit="cover">
-                <template #error>
-                  <div class="image-placeholder">
-                    <el-icon><Picture /></el-icon>
-                  </div>
-                </template>
-              </el-image>
-            </div>
-            <div class="dish-info">
-              <div class="dish-main-info">
-                <h4 class="dish-name">{{ dish.name }}</h4>
-                <el-tag size="small" :type="getCategoryType(dish.category)">
-                  {{ dish.category }}
-                </el-tag>
-              </div>
-              <p class="dish-description">{{ dish.description }}</p>
-              <div class="dish-bottom">
-                <div class="dish-price">
-                  <span class="price-symbol">¥</span>
-                  <span class="price-value">{{ dish.price }}</span>
-                  <span class="stock-info" v-if="dish.stock <= 10 && dish.stock > 0">
-                    仅剩{{ dish.stock }}份
-                  </span>
-                  <span class="stock-info sold-out" v-if="dish.stock === 0">
-                    已售罄
-                  </span>
-                </div>
-                <el-button 
-                  type="primary" 
-                  size="small"
-                  :disabled="dish.stock === 0"
-                  @click.stop="orderDish(dish)">
-                  {{ dish.stock > 0 ? '预订' : '已售罄' }}
-                </el-button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 平面图对话框 -->
-    <el-dialog
-      :title="`${currentCanteen?.name || ''} 平面图`"
-      v-model="floorPlanVisible"
-      width="80%"
-      class="floor-plan-dialog">
-      <!-- 平面图内容与管理端相同 -->
+      
+      <template #footer>
+        <el-button @click="checkoutDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitOrder">提交订单</el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, inject } from 'vue'
+import { ref, computed, reactive, onMounted, onUnmounted, inject, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   Location, 
   Timer, 
   Position, 
   Picture,
-  Search 
+  Search,
+  Plus,
+  ShoppingCart
 } from '@element-plus/icons-vue'
 import CampusMap3D from './components/CampusMap3D.vue'
 import { ElMessage } from 'element-plus'
@@ -261,7 +574,9 @@ export default {
     Position,
     Picture,
     Search,
-    CampusMap3D
+    Plus,
+    CampusMap3D,
+    ShoppingCart
   },
   setup() {
     const router = useRouter()
@@ -269,10 +584,9 @@ export default {
     const selectedFloor = ref(null)
     const selectedWindow = ref(null)
     const searchQuery = ref('')
-    const categoryFilter = ref('')
-    const priceSort = ref('')
-    const floorPlanVisible = ref(false)
-    const currentCanteen = ref(null)
+    const windowSearchQuery = ref('')
+    const selectedTaste = ref('')
+    const sortOption = ref('')
     const dishes = ref([])
 
     // 注入函数
@@ -297,81 +611,191 @@ export default {
       { id: 2, name: '沁园餐厅', floors: 2, location: '学生宿舍区' },
       { id: 3, name: '馨园餐厅', floors: 1, location: '教学区' },
       { id: 4, name: '仲园餐厅', floors: 2, location: '图书馆附近' },
-      { id: 5, name: '雅园餐厅', floors: 1, location: '体育馆附近' },
-      { id: 6, name: 'F区服务点', floors: 1, location: 'F区教学楼' },
+      { id: 5, name: '雅园餐厅', floors: 1, location: '体馆附近' },
+      { id: 6, name: 'F服务点', floors: 1, location: 'F区教学楼' },
       { id: 7, name: 'A区服务点', floors: 1, location: 'A区教学楼' }
     ]
 
-    // 测试数据 - 窗口列表
+    // 修改测试数据 - 窗口列表
     const testWindows = {
       '中央食堂': {
         1: [
-          { id: 1, name: '川湘菜', operatingHours: '10:30-13:30, 16:30-19:00', status: 'open' },
+          { id: 1, name: '川湘', operatingHours: '10:30-13:30, 16:30-19:00', status: 'open' },
           { id: 2, name: '粤式炖汤', operatingHours: '10:30-13:30', status: 'closed' },
-          { id: 3, name: '新疆风味', operatingHours: '10:30-19:00', status: 'open' }
-        ],
-        2: [
+          { id: 3, name: '新疆风味', operatingHours: '10:30-19:00', status: 'open' },
           { id: 4, name: '面食档口', operatingHours: '10:30-19:00', status: 'open' },
           { id: 5, name: '米饭窗口', operatingHours: '10:30-13:30, 16:30-19:00', status: 'open' }
         ],
-        3: [
+        2: [
           { id: 6, name: '特色小炒', operatingHours: '10:30-19:00', status: 'open' },
-          { id: 7, name: '清真窗口', operatingHours: '10:30-19:00', status: 'closed' }
+          { id: 7, name: '清真窗口', operatingHours: '10:30-19:00', status: 'open' },
+          { id: 8, name: '东北菜', operatingHours: '10:30-19:00', status: 'open' },
+          { id: 9, name: '快餐套餐', operatingHours: '10:30-19:00', status: 'open' }
+        ],
+        3: [
+          { id: 10, name: '火锅窗口', operatingHours: '10:30-19:00', status: 'open' },
+          { id: 11, name: '饮品店', operatingHours: '08:30-20:00', status: 'open' },
+          { id: 12, name: '水果店', operatingHours: '08:30-20:00', status: 'open' }
         ]
       },
-      'F区服务点': {
+      '沁园餐厅': {
         1: [
-          { id: 20, name: 'F区快餐', operatingHours: '10:30-13:30, 16:30-19:00', status: 'open' },
-          { id: 21, name: 'F区饮品', operatingHours: '08:30-20:00', status: 'open' }
-        ]
-      },
-      'A区服务点': {
-        1: [
-          { id: 22, name: 'A区快餐', operatingHours: '10:30-13:30, 16:30-19:00', status: 'open' },
-          { id: 23, name: 'A区饮品', operatingHours: '08:30-20:00', status: 'open' }
+          { id: 13, name: '自选快餐', operatingHours: '10:30-19:00', status: 'open' },
+          { id: 14, name: '面食档口', operatingHours: '10:30-19:00', status: 'open' },
+          { id: 15, name: '饮品店', operatingHours: '08:30-20:00', status: 'open' }
+        ],
+        2: [
+          { id: 16, name: '特色炒菜', operatingHours: '10:30-19:00', status: 'open' },
+          { id: 17, name: '盖浇饭', operatingHours: '10:30-19:00', status: 'open' }
         ]
       }
     }
 
-    // 测试数据 - 菜品列表
-    const testDishes = [
-      {
-        id: 1,
-        name: '麻婆豆腐',
-        price: 12,
-        description: '使用四川特制豆瓣酱，口感麻辣鲜香',
-        category: '川菜',
-        image_url: 'https://example.com/mapo-tofu.jpg',
-        stock: 20
-      },
-      {
-        id: 2,
-        name: '红烧排骨',
-        price: 16,
-        description: '精选五花肉，红烧入味',
-        category: '本帮菜',
-        image_url: 'https://example.com/paigu.jpg',
-        stock: 15
-      },
-      {
-        id: 3,
-        name: '清炒时蔬',
-        price: 8,
-        description: '当季新鲜蔬菜',
-        category: '素菜',
-        image_url: 'https://example.com/vegetables.jpg',
-        stock: 30
-      },
-      {
-        id: 4,
-        name: '番茄牛肉面',
-        price: 15,
-        description: '手工面条，配以新鲜番茄和优质牛肉',
-        category: '面食',
-        image_url: 'https://example.com/beef-noodles.jpg',
-        stock: 0
-      }
-    ]
+    // 修改测试数据 - 菜品列表
+    const windowDishMap = {
+      1: [ // 川湘菜窗口
+        {
+          id: 1,
+          name: '麻婆豆腐',
+          price: 12,
+          description: '使用四川特制豆瓣酱，口感麻辣鲜香',
+          category: '川菜',
+          taste: 'spicy',
+          image_url: 'https://example.com/mapo-tofu.jpg',
+          stock: 20,
+          weekSales: 156  // 添加周销量数据
+        },
+        {
+          id: 2,
+          name: '水煮肉片',
+          price: 22,
+          description: '新鲜猪肉，麻辣鲜香',
+          category: '川菜',
+          taste: 'spicy',
+          image_url: 'https://example.com/shuizhu.jpg',
+          stock: 15,
+          weekSales: 90
+        },
+        {
+          id: 3,
+          name: '回锅肉',
+          price: 18,
+          description: '传统川式回锅肉',
+          category: '川菜',
+          taste: 'savory',
+          image_url: 'https://example.com/huiguo.jpg',
+          stock: 25,
+          weekSales: 80
+        }
+      ],
+      2: [ // 粤式炖汤窗口
+        {
+          id: 4,
+          name: '莲藕排骨汤',
+          price: 16,
+          description: '清甜可口，营养丰富',
+          category: '粤菜',
+          taste: 'light',
+          image_url: 'https://example.com/soup.jpg',
+          stock: 10,
+          weekSales: 70
+        },
+        {
+          id: 5,
+          name: '海鲜汤',
+          price: 20,
+          description: '新鲜海鲜熬制',
+          category: '粤菜',
+          taste: 'light',
+          image_url: 'https://example.com/seafood-soup.jpg',
+          stock: 8,
+          weekSales: 60
+        }
+      ],
+      4: [ // 面食档口
+        {
+          id: 6,
+          name: '番茄牛肉面',
+          price: 15,
+          description: '手工面条，配以新鲜番茄和优质牛肉',
+          category: '面食',
+          taste: 'savory',
+          image_url: 'https://example.com/beef-noodles.jpg',
+          stock: 30,
+          weekSales: 50
+        },
+        {
+          id: 7,
+          name: '担担面',
+          price: 12,
+          description: '正宗川式���担面，香辣可口',
+          category: '面食',
+          taste: 'spicy',
+          image_url: 'https://example.com/dandanmian.jpg',
+          stock: 25,
+          weekSales: 40
+        },
+        {
+          id: 8,
+          name: '阳春面',
+          price: 8,
+          description: '简单美味',
+          category: '面食',
+          taste: 'light',
+          image_url: 'https://example.com/yangchun.jpg',
+          stock: 40,
+          weekSales: 30
+        }
+      ],
+      6: [ // 特色小炒
+        {
+          id: 9,
+          name: '宫保鸡丁',
+          price: 16,
+          description: '经典川菜',
+          category: '川菜',
+          taste: 'spicy',
+          image_url: 'https://example.com/gongbao.jpg',
+          stock: 20,
+          weekSales: 20
+        },
+        {
+          id: 10,
+          name: '糖醋里脊',
+          price: 18,
+          description: '酸甜可口',
+          category: '本帮菜',
+          taste: 'sweet',
+          image_url: 'https://example.com/tangcu.jpg',
+          stock: 15,
+          weekSales: 15
+        }
+      ],
+      11: [ // 饮品店
+        {
+          id: 11,
+          name: '珍珠奶茶',
+          price: 8,
+          description: '香浓奶茶',
+          category: '饮品',
+          taste: 'sweet',
+          image_url: 'https://example.com/milk-tea.jpg',
+          stock: 50,
+          weekSales: 50
+        },
+        {
+          id: 12,
+          name: '柠檬水',
+          price: 6,
+          description: '清爽解暑',
+          category: '饮品',
+          taste: 'sweet',
+          image_url: 'https://example.com/lemon.jpg',
+          stock: 40,
+          weekSales: 40
+        }
+      ]
+    }
 
     // 测试数据 - 菜品分类
     const categories = ['川菜', '本帮菜', '粤菜', '面食', '素菜', '饮品']
@@ -382,11 +806,11 @@ export default {
         '川菜': 'danger',    // 红色
         '本帮菜': 'warning', // 黄色
         '粤菜': 'success',   // 绿色
-        '面食': 'primary',   // ���色
+        '面食': 'primary',   // 蓝色
         '素菜': 'info',      // 灰色
-        '饮品': ''          // 默认
+        '饮品': 'info'      // 默认使用 info 类型
       }
-      return typeMap[category] || ''
+      return typeMap[category] || 'info' // 如果没有匹配的类型，返回 info
     }
 
     // 修改餐厅切换处理函数
@@ -415,7 +839,7 @@ export default {
         id: 3,
         name: '馨园餐厅',
         position: { x: 0, z: -30 },
-        location: '中央食堂附近'
+        location: '��央食堂附'
       },
       {
         id: 4,
@@ -456,131 +880,31 @@ export default {
     }
 
     // 添加窗口选择函数
-    const selectWindow = (window) => {
+    const selectWindow = async (window) => {
       selectedWindow.value = window
       // 加载该窗口的菜品列表
       if (window) {
-        loadWindowDishes(window.id)
+        await loadWindowDishes(window.id)
       } else {
-        dishes.value = [] // 清空菜品列表
+        dishes.value = []
       }
     }
 
-    // 添加加载窗口菜品的函数
+    // 修改加载窗口菜品的函数
     const loadWindowDishes = async (windowId) => {
       try {
-        // 在实际开发中替换为真实的 API 调用
-        // const response = await request.get(`/student/windows/${windowId}/dishes`)
-        // dishes.value = response.data
-        
-        // 使用测试数据 - 根据窗口ID筛选菜品
-        const windowDishMap = {
-          1: [ // 川湘菜窗口
-            {
-              id: 1,
-              name: '麻婆豆腐',
-              price: 12,
-              description: '使用四川特制豆瓣酱，口感麻辣鲜香',
-              category: '川菜',
-              image_url: 'https://example.com/mapo-tofu.jpg',
-              stock: 20
-            },
-            {
-              id: 5,
-              name: '水煮肉片',
-              price: 22,
-              description: '新鲜猪肉，麻辣鲜香',
-              category: '川菜',
-              image_url: 'https://example.com/shuizhu.jpg',
-              stock: 15
-            }
-          ],
-          2: [ // 粤式炖汤窗口
-            {
-              id: 6,
-              name: '莲藕排骨汤',
-              price: 16,
-              description: '清甜可口，营养丰富',
-              category: '粤菜',
-              image_url: 'https://example.com/soup.jpg',
-              stock: 10
-            }
-          ],
-          4: [ // 面食档口
-            {
-              id: 4,
-              name: '番茄牛肉面',
-              price: 15,
-              description: '手工面条，配以新鲜番茄和优质牛肉',
-              category: '面食',
-              image_url: 'https://example.com/beef-noodles.jpg',
-              stock: 0
-            },
-            {
-              id: 7,
-              name: '担担面',
-              price: 12,
-              description: '正宗川式担担面，香辣可口',
-              category: '面食',
-              image_url: 'https://example.com/dandanmian.jpg',
-              stock: 25
-            }
-          ],
-          20: [ // F区快餐窗口
-            {
-              id: 30,
-              name: 'F区套餐A',
-              price: 15,
-              description: '米饭、炒菜、汤品',
-              category: '套餐',
-              image_url: 'https://example.com/f-meal-a.jpg',
-              stock: 30
-            }
-          ],
-          21: [ // F区饮品窗口
-            {
-              id: 31,
-              name: '奶茶',
-              price: 8,
-              description: '珍珠奶茶',
-              category: '饮品',
-              image_url: 'https://example.com/milk-tea.jpg',
-              stock: 50
-            }
-          ],
-          22: [ // A区快餐窗口
-            {
-              id: 32,
-              name: 'A区套餐B',
-              price: 16,
-              description: '米饭、炒菜、水果',
-              category: '套餐',
-              image_url: 'https://example.com/a-meal-b.jpg',
-              stock: 25
-            }
-          ],
-          23: [ // A区饮品窗口
-            {
-              id: 33,
-              name: '果汁',
-              price: 10,
-              description: '鲜榨果汁',
-              category: '饮品',
-              image_url: 'https://example.com/juice.jpg',
-              stock: 40
-            }
-          ]
-        }
-        
+        // 使用测试数据
         dishes.value = windowDishMap[windowId] || []
         
         if (dishes.value.length === 0) {
           ElMessage.info('该窗口暂无菜品信息')
         }
+        return dishes.value
       } catch (error) {
         console.error('加载菜品列表失败:', error)
         ElMessage.error('加载菜品列表失败')
         dishes.value = []
+        return []
       }
     }
 
@@ -594,31 +918,81 @@ export default {
       router.push(`/student/dishes/${dish.id}`)
     }
 
-    // 添加菜品过滤计算属性
-    const filteredDishes = computed(() => {
+    // 定义口味选项
+    const tasteOptions = [
+      { label: '麻辣', value: 'spicy' },
+      { label: '清淡', value: 'light' },
+      { label: '酸甜', value: 'sweet' },
+      { label: '咸鲜', value: 'savory' }
+    ]
+
+    // 处理搜索
+    const handleSearch = () => {
+      // 搜索逻辑会通过计算属性自动处理
+    }
+
+    // 处理窗口级��搜索
+    const handleWindowSearch = () => {
+      // 窗口级别搜索逻辑会通过计算属性自动处理
+    }
+
+    // 处理排序
+    const handleSort = () => {
+      if (!sortOption.value || sortOption.value === 'default') {
+        // 如果选择"全部"或"默��排序"，恢复随机顺序
+        allDishes.value = [...allDishes.value].sort(() => Math.random() - 0.5)
+      }
+    }
+
+    // 处理口味过滤
+    const handleFilter = () => {
+      // 过滤逻辑会通过计算属性自动处理
+    }
+
+    // 重置所有筛选件
+    const resetFilters = () => {
+      searchQuery.value = ''
+      windowSearchQuery.value = ''
+      selectedTaste.value = ''
+      sortOption.value = ''
+      selectedCategory.value = ''
+    }
+
+    // 修改菜品过滤的计算属性
+    const finalFilteredDishes = computed(() => {
       let result = dishes.value
 
-      // 搜索过滤
-      if (searchQuery.value) {
+      // 应用搜索过滤
+      if (windowSearchQuery.value) {
+        const query = windowSearchQuery.value.toLowerCase()
         result = result.filter(dish => 
-          dish.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+          dish.name.toLowerCase().includes(query) ||
+          dish.description.toLowerCase().includes(query)
         )
       }
 
-      // 分类过滤
-      if (categoryFilter.value) {
-        result = result.filter(dish => 
-          dish.category === categoryFilter.value
-        )
+      // ��用口味过滤
+      if (selectedTaste.value) {
+        result = result.filter(dish => dish.taste === selectedTaste.value)
       }
 
-      // 价格排序
-      if (priceSort.value) {
-        result.sort((a, b) => {
-          if (priceSort.value === 'asc') {
-            return a.price - b.price
-          } else {
-            return b.price - a.price
+      // 应用分类过滤
+      if (selectedCategory.value) {
+        result = result.filter(dish => dish.category === selectedCategory.value)
+      }
+
+      // 应用排序
+      if (sortOption.value) {
+        result = [...result].sort((a, b) => {
+          switch (sortOption.value) {
+            case 'price-asc':
+              return a.price - b.price
+            case 'price-desc':
+              return b.price - a.price
+            case 'sales':
+              return (b.sales || 0) - (a.sales || 0)
+            default:
+              return 0
           }
         })
       }
@@ -652,67 +1026,535 @@ export default {
       currentPage.value = page
     }
 
-    // 添加楼层选择函数
-    const selectFloor = (floor) => {
-      selectedFloor.value = floor
-      selectedWindow.value = null // 清空已选窗口
+    // 新增楼层切换函数
+    const toggleFloor = (floor) => {
+      // 如果点击的是当前选中的楼层，则取消选择，显示全部菜品
+      if (selectedFloor.value === floor) {
+        selectedFloor.value = null
+        selectedWindow.value = null
+      } else {
+        // 否则选择新的楼层
+        selectedFloor.value = floor
+        selectedWindow.value = null
+      }
       currentPage.value = 1 // 重置页码
     }
 
-    // 平面图相关状态
-    const currentFloor = ref(1)
-    const selectedCanteen = ref(null)
+    // 在 setup 中添加保存状态的方法
+    const saveCurrentState = () => {
+      const dishList = document.querySelector('.dishes-list')
+      const state = {
+        activeCanteen: activeCanteen.value,
+        selectedFloor: selectedFloor.value,
+        selectedWindow: selectedWindow.value ? {
+          id: selectedWindow.value.id,
+          name: selectedWindow.value.name,
+          operatingHours: selectedWindow.value.operatingHours,
+          status: selectedWindow.value.status
+        } : null,
+        searchQuery: searchQuery.value,
+        windowSearchQuery: windowSearchQuery.value,
+        selectedTaste: selectedTaste.value,
+        scrollPosition: dishList?.scrollTop || 0,
+        scrollHeight: dishList?.scrollHeight || 0,
+        clientHeight: dishList?.clientHeight || 0
+      }
+      localStorage.setItem('dishListState', JSON.stringify(state))
+    }
 
-    // 查看平面图
-    const viewFloorPlan = () => {
-      if (selectedCanteen.value) {
-        floorPlanVisible.value = true
+    // 修改 goToDishDetail 方法
+    const goToDishDetail = (dishId) => {
+      saveCurrentState() // 保存当前状态
+      router.push(`/student/dishes/${dishId}`)
+    }
+
+    // 在 setup 中��加新的方法
+    const getTasteLabel = (taste) => {
+      const tasteMap = {
+        'spicy': '麻辣',
+        'light': '清淡',
+        'sweet': '甜味',
+        'savory': '咸鲜'
+      }
+      return tasteMap[taste] || taste
+    }
+
+    const getTasteTagType = (taste) => {
+      const typeMap = {
+        'spicy': 'danger',
+        'light': 'info',
+        'sweet': 'warning',
+        'savory': 'success'
+      }
+      return typeMap[taste] || ''
+    }
+
+    // 在 setup 中添加购物车相关的响应式数据和方法
+    const cartData = ref({}) // 使用对象存储每个窗口的购物车数据
+    const cartDrawerVisible = ref(false)
+    const checkoutDialogVisible = ref(false)
+    const checkoutFormRef = ref(null)
+
+    const checkoutForm = reactive({
+      diningTime: '',
+      diningType: 'dine_in',
+      remark: ''
+    })
+
+    const checkoutRules = {
+      diningTime: [
+        { required: true, message: '请选择就餐时间', trigger: 'change' }
+      ],
+      diningType: [
+        { required: true, message: '请选择就餐方式', trigger: 'change' }
+      ]
+    }
+
+    // 修改计算属性,只显示当前窗口的购物车数据
+    const cartItems = computed(() => {
+      // 如果在特定窗口视图，显示该窗口的购物车；否则显示所有窗口的购物车
+      const windowId = selectedWindow.value?.id
+      if (windowId) {
+        return cartData.value[windowId] || []
+      }
+      // 在全部菜品视图时，返回所有窗口的购物车商品
+      return Object.values(cartData.value).flat()
+    })
+
+    // 修改总价计算
+    const totalPrice = computed(() => {
+      return cartItems.value.reduce((total, item) => {
+        return total + (item.price * item.quantity)
+      }, 0)
+    })
+
+    // 修改总数量计算
+    const totalCount = computed(() => {
+      return cartItems.value.reduce((total, item) => {
+        return total + item.quantity
+      }, 0)
+    })
+
+    // 修改添加到购物车的方法
+    const addToCart = async (dish) => {
+      try {
+        event.stopPropagation()
+        
+        // 获取窗口ID，优先使用选中窗口的ID，如果是全部菜品视图则使用菜品自带的windowId
+        const windowId = selectedWindow.value?.id || dish.windowId
+        
+        // 如果该窗口还没有购物车数据,初始化一个空数组
+        if (!cartData.value[windowId]) {
+          cartData.value[windowId] = []
+        }
+        
+        const windowCart = cartData.value[windowId]
+        const existingItem = windowCart.find(item => item.id === dish.id)
+        
+        if (existingItem) {
+          existingItem.quantity++
+        } else {
+          windowCart.push({
+            ...dish,
+            windowId,
+            quantity: 1
+          })
+        }
+        
+        // 保存到本地存储
+        localStorage.setItem('cartData', JSON.stringify(cartData.value))
+        
+        ElMessage.success('已加到购物车')
+      } catch (error) {
+        console.error('添加购物车失败:', error)
+        ElMessage.error('添加购物车失败')
       }
     }
 
-    // 获取当前楼层平面图
-    const getCurrentFloorPlan = () => {
-      if (!selectedCanteen.value) return ''
-      // 这里返回对应的平面图URL
-      return `/floor-plans/${selectedCanteen.value.id}-${currentFloor.value}.png`
+    // 修改处理数量变化的方法
+    const handleQuantityChange = (item, windowId) => {
+      if (item.quantity === 0) {
+        // 过滤掉数量为0的商品
+        cartData.value[windowId] = cartData.value[windowId].filter(i => i.id !== item.id);
+        // 如果该窗口没有商品了，直接删除该窗口的购物车数据
+        if (cartData.value[windowId].length === 0) {
+          delete cartData.value[windowId];
+        }
+      }
+    }
+
+    // 显示购物车详情
+    const showCartDetail = () => {
+      cartDrawerVisible.value = true
+    }
+
+    // 去结算
+    const goToCheckout = (windowId) => {
+      cartDrawerVisible.value = false
+      checkoutDialogVisible.value = true
+      currentWindowId.value = windowId
+    }
+
+    // 修改提交订单的方法
+    const submitOrder = async () => {
+      if (!checkoutFormRef.value) return
+      
+      try {
+        await checkoutFormRef.value.validate()
+        
+        const windowId = selectedWindow.value?.id
+        if (!windowId || !cartData.value[windowId]) {
+          throw new Error('购物车数据无效')
+        }
+        
+        // 构建订单数据
+        const orderData = {
+          windowId,
+          items: cartData.value[windowId],
+          ...checkoutForm
+        }
+        
+        // await request.post('/student/orders', orderData)
+        
+        ElMessage.success('下单成功')
+        checkoutDialogVisible.value = false
+        // 清空当前窗口的购物车
+        cartData.value[windowId] = []
+        
+        router.push('/student/orders')
+      } catch (error) {
+        console.error('下单失败:', error)
+        ElMessage.error('下单失败')
+      }
+    }
+
+    // 修改购物车样式
+    const cartStyle = computed(() => {
+      return {
+        position: 'fixed',
+        left: '135px',
+        right: '50px',
+        bottom: '60px',
+        background: '#fff',
+        padding: '15px 20px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
+        zIndex: 1000
+      }
+    })
+
+    // 修改购物车数据结构，添加窗口ID
+    const currentWindowId = ref(null)
+
+    // ��改 restoreState 方法
+    const restoreState = async () => {
+      const stateStr = localStorage.getItem('dishListState')
+      const isReturning = localStorage.getItem('isReturningFromDetail')
+      
+      if (stateStr && isReturning === 'true') {
+        try {
+          const state = JSON.parse(stateStr)
+          
+          // 先恢复餐厅选择
+          activeCanteen.value = state.activeCanteen
+          await nextTick()
+          
+          // 恢复楼层选���
+          if (state.selectedFloor) {
+            selectedFloor.value = state.selectedFloor
+            await nextTick()
+            
+            // 恢复窗口选择
+            if (state.selectedWindow) {
+              const windowList = getFloorWindows(state.activeCanteen, state.selectedFloor)
+              const window = windowList.find(w => w.id === state.selectedWindow.id)
+              if (window) {
+                // 先加载菜品，设置滚动位置
+                await selectWindow(window)
+                await nextTick()
+                
+                // 确保菜品列表已完全渲染
+                await new Promise(resolve => setTimeout(resolve, 200))
+                
+                const dishList = document.querySelector('.dishes-list')
+                if (dishList) {
+                  // 检查滚动位置是否有效
+                  const maxScroll = dishList.scrollHeight - dishList.clientHeight
+                  const targetScroll = Math.min(state.scrollPosition, maxScroll)
+                  dishList.scrollTop = targetScroll
+                }
+              }
+            }
+          }
+          
+          // 最后恢复过滤和搜索条件
+          searchQuery.value = state.searchQuery
+          windowSearchQuery.value = state.windowSearchQuery
+          selectedTaste.value = state.selectedTaste
+          sortOption.value = state.priceSort
+          
+          // 清除状态
+          localStorage.removeItem('isReturningFromDetail')
+          localStorage.removeItem('dishListState')
+        } catch (error) {
+          console.error('恢复状态失败:', error)
+        }
+      }
+    }
+
+    // 修改组件挂载时的行为
+    onMounted(async () => {
+      if (localStorage.getItem('isReturningFromDetail') === 'true') {
+        await nextTick()
+        await restoreState()
+      }
+    })
+
+    // 添加防抖函数
+    const debounce = (fn, delay) => {
+      let timer = null
+      return function (...args) {
+        if (timer) clearTimeout(timer)
+        timer = setTimeout(() => fn.apply(this, args), delay)
+      }
+    }
+
+    // 使用防抖处理保存状态
+    const debouncedSaveState = debounce(saveCurrentState, 300)
+
+    // 在滚动时保存状态
+    onMounted(() => {
+      const dishList = document.querySelector('.dishes-list')
+      if (dishList) {
+        dishList.addEventListener('scroll', debouncedSaveState)
+      }
+      
+      return () => {
+        if (dishList) {
+          dishList.removeEventListener('scroll', debouncedSaveState)
+        }
+      }
+    })
+
+    // 在 setup 中添加新的响应式数据
+    const selectedCategory = ref('')
+    const dishCategories = computed(() => {
+      const categories = new Set(dishes.value.map(dish => dish.category))
+      return ['全部', ...Array.from(categories)]
+    })
+
+    // 添加分类选择方法
+    const selectCategory = (category) => {
+      selectedCategory.value = category === '全部' ? '' : category
+    }
+
+    // 修改清空购物车方法
+    const clearCart = () => {
+      // 重置购物车数据为新的空对象
+      cartData.value = {}
+      // 关闭购物车抽屉
+      cartDrawerVisible.value = false
+      // 提示用户
+      ElMessage.success('购物车已清空')
+    }
+
+    // 修改获取所有菜品的计算属性
+    const allDishes = computed(() => {
+      const currentCanteen = activeCanteen.value;
+      const canteenWindows = testWindows[currentCanteen] || {};
+      let allCanteenDishes = [];
+
+      // 遍历所有楼层和窗口
+      Object.values(canteenWindows).forEach(floor => {
+        floor.forEach(window => {
+          const windowDishes = windowDishMap[window.id] || [];
+          // 为每个菜品添加窗口信息
+          const dishesWithWindow = windowDishes.map(dish => ({
+            ...dish,
+            windowName: window.name,
+            windowId: window.id,
+            windowStatus: window.status
+          }));
+          allCanteenDishes = [...allCanteenDishes, ...dishesWithWindow];
+        });
+      });
+
+      // 使用 Fisher-Yates 洗牌算法随机打乱菜品顺序
+      for (let i = allCanteenDishes.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allCanteenDishes[i], allCanteenDishes[j]] = [allCanteenDishes[j], allCanteenDishes[i]];
+      }
+
+      return allCanteenDishes;
+    });
+
+    // 修改过滤逻辑以适应所有菜品
+    const finalFilteredAllDishes = computed(() => {
+      let result = allDishes.value;
+
+      // 应用搜索过滤
+      if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase();
+        result = result.filter(dish => 
+          dish.name.toLowerCase().includes(query) ||
+          dish.description.toLowerCase().includes(query)
+        );
+      }
+
+      // 应用口味过滤
+      if (selectedTaste.value) {
+        result = result.filter(dish => dish.taste === selectedTaste.value);
+      }
+
+      // 应用分类过滤
+      if (selectedCategory.value) {
+        result = result.filter(dish => dish.category === selectedCategory.value);
+      }
+
+      // 应用排序
+      if (sortOption.value) {
+        result = [...result].sort((a, b) => {
+          switch (sortOption.value) {
+            case 'price-asc':
+              return a.price - b.price;
+            case 'price-desc':
+              return b.price - a.price;
+            case 'sales-desc':
+              return b.weekSales - a.weekSales;
+            case 'sales-asc':
+              return a.weekSales - b.weekSales;
+            default:
+              return 0;
+          }
+        });
+      }
+
+      return result;
+    });
+
+    // 添加根据窗口ID获取楼层的方法
+    const getFloorByWindowId = (windowId) => {
+      const currentCanteen = activeCanteen.value;
+      const canteenWindows = testWindows[currentCanteen] || {};
+      
+      for (const [floor, windows] of Object.entries(canteenWindows)) {
+        if (windows.some(window => window.id === windowId)) {
+          return floor;
+        }
+      }
+      return '';
+    };
+
+    // 添加一个新的计算属性来检查购物��是否有商品
+    const hasCartItems = computed(() => {
+      return cartData.value && Object.values(cartData.value).some(items => items.length > 0)
+    })
+
+    // 添加新的计算属性和方法
+    const groupedCartItems = computed(() => {
+      return cartData.value || {};
+    });
+
+    const getWindowName = (windowId) => {
+      const currentCanteen = activeCanteen.value;
+      const canteenWindows = testWindows[currentCanteen] || {};
+      for (const floor of Object.values(canteenWindows)) {
+        const window = floor.find(w => w.id === Number(windowId));
+        if (window) return window.name;
+      }
+      return '未知窗口';
+    };
+
+    const getWindowTotal = (items) => {
+      return items.reduce((total, item) => total + (item.price * item.quantity), 0);
+    };
+
+    const getWindowCount = (items) => {
+      return items.reduce((total, item) => total + item.quantity, 0);
+    };
+
+    const clearWindowCart = (windowId) => {
+      // 直接删除该窗口的购物车数据，而不是设置为空数组
+      delete cartData.value[windowId];
+      if (Object.values(cartData.value).every(items => items.length === 0)) {
+        cartDrawerVisible.value = false;
+      }
+      ElMessage.success('已清空该窗口购物车');
+    };
+
+    // 在 setup 中添加跳转方法
+    const goToCart = () => {
+      router.push('/student/cart')
     }
 
     return {
+      router,
       activeCanteen,
       selectedWindow,
       searchQuery,
-      categoryFilter,
-      priceSort,
+      windowSearchQuery,
+      selectedTaste,
+      tasteOptions,
       canteens,
-      floorPlanVisible,
-      currentCanteen,
-      // 返回注入的函数
       isCanteenOpen: canteenStatus,
       getFloorWindows: windows,
       isWindowOpen: windowStatus,
       getCrowdLevelType: crowdLevel,
       getCrowdLevelText: crowdText,
       getWindowDishCount: dishCount,
-      handleCanteenChange,  // 记得返回这个函数
+      handleCanteenChange,
       mapCanteens,
       handleMapCanteenSelect,
       selectWindow,
       showDishDetail,
       orderDish,
       dishes,
-      filteredDishes,
-      categories, // 添加到返回值中
-      getCategoryType, // 添加到返回值中
+      finalFilteredDishes,
+      categories,
+      getCategoryType,
       selectedFloor,
-      selectFloor,
+      toggleFloor,
       currentPage,
       totalPages,
       displayWindows,
       handlePageChange,
-      viewFloorPlan,
-      currentFloor,
-      selectedCanteen,
-      getCurrentFloorPlan
+      handleSearch,
+      handleWindowSearch,
+      handleSort,
+      handleFilter,
+      resetFilters,
+      goToDishDetail,
+      getTasteLabel,
+      getTasteTagType,
+      addToCart,
+      cartItems,
+      cartDrawerVisible,
+      checkoutDialogVisible,
+      checkoutForm,
+      checkoutFormRef,
+      checkoutRules,
+      totalPrice,
+      totalCount,
+      showCartDetail,
+      handleQuantityChange,
+      goToCheckout,
+      submitOrder,
+      cartStyle,
+      currentWindowId,
+      sortOption,
+      selectedCategory,
+      dishCategories,
+      selectCategory,
+      clearCart,
+      finalFilteredAllDishes,
+      getFloorByWindowId,
+      hasCartItems,
+      groupedCartItems,
+      getWindowName,
+      getWindowTotal,
+      getWindowCount,
+      clearWindowCart,
+      goToCart
     }
   }
 }
@@ -769,7 +1611,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 15px;
-  padding: 10px 20px;
+  padding: 0 20px;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -924,228 +1766,1142 @@ export default {
 }
 
 .dish-item {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  transition: all 0.3s;
-  cursor: pointer;
-}
-
-.dish-item:hover {
-  background: #f5f7fa;
-}
-
-.dish-image-wrapper {
-  width: 100px;
-  height: 100px;
-  margin-right: 10px;
-}
-
-.dish-img {
-  width: 100%;
-  height: 100%;
-}
-
-.dish-main-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.dish-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.price-symbol {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.price-value {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.stock-info {
-  font-size: 13px;
-  color: #409EFF;
-}
-
-.stock-info.sold-out {
-  color: #f56c6c;
-}
-
-.window-card {
-  margin: 0;
-  cursor: pointer;
-  transition: all 0.3s;
-  border: none;
-  background: transparent;
-}
-
-.window-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.window-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.window-name {
-  font-weight: 500;
-}
-
-.window-content {
-  margin-top: 5px;
-  color: #666;
-  font-size: 13px;
-}
-
-.floor-nav {
-  padding: 0;
-}
-
-.floor-nav .nav-list {
-  display: flex;
-  width: 100%;
-  gap: 0;
-}
-
-.floor-nav .nav-item {
-  flex: 1;
-  border-radius: 0;
-  padding: 15px 0;
-  justify-content: center;
-  font-size: 16px;
-  font-weight: 500;
-  background: transparent;
-  border-bottom: 2px solid transparent;
-}
-
-.floor-nav .nav-item:hover {
-  background: #f5f7fa;
-  color: #409EFF;
-}
-
-.floor-nav .nav-item.active {
-  background: transparent;
-  color: #409EFF;
-  border-bottom-color: #409EFF;
-}
-
-.floor-nav .nav-item:first-child {
-  border-radius: 8px 0 0 8px;
-}
-
-.floor-nav .nav-item:last-child {
-  border-radius: 0 8px 8px 0;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .floor-nav .nav-list {
-    flex-wrap: wrap;
-  }
-
-  .floor-nav .nav-item {
-    flex: 1;
-    min-width: 33.33%;
-  }
-}
-
-.windows-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
-  width: 100%;
-}
-
-.window-grid-item {
   background: #fff;
   border-radius: 8px;
-  padding: 16px;
+  margin-bottom: 15px;
+  padding: 15px;
+  display: flex;
+  gap: 20px;
   cursor: pointer;
   transition: all 0.3s;
   border: 1px solid #ebeef5;
 }
 
-.window-grid-item:hover {
+.dish-item:hover {
   transform: translateY(-2px);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
 }
 
-.window-grid-item.active {
-  border-color: #409EFF;
-  background: #ecf5ff;
+.dish-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-.window-grid-content {
+.dish-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dish-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dish-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.dish-description {
+  font-size: 13px;
+  color: #909399;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: break-word;
+  overflow: hidden;
+}
+
+.dish-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.dish-tags :deep(.el-tag) {
+  margin-bottom: 4px;
+}
+
+.dish-footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price-info {
+  display: flex;
+  align-items: baseline;
+}
+
+.price-symbol {
+  font-size: 12px;
+  color: #f56c6c;
+  margin-right: 2px;
+}
+
+.price-value {
+  font-size: 20px;
+  font-weight: 500;
+  color: #f56c6c;
+  margin-left: 2px;
+}
+
+.add-button {
+  padding: 8px;
+}
+
+/* 响应��调整 */
+@media (max-width: 768px) {
+  .dishes-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dish-card {
+    margin-bottom: 12px;
+  }
+  
+  .window-filter-controls {
+    flex-direction: column;
+  }
+  
+  .filter-item {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+  font-size: 24px;
+}
+
+.filter-card {
+  margin-bottom: 20px;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  min-width: 200px;
+}
+
+.window-filter-controls {
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #fff;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .filter-controls {
+    flex-direction: column;
+  }
+
+  .filter-item {
+    width: 100%;
+  }
+}
+
+.window-closed,
+.no-window-selected {
+  text-align: center;
+  padding: 60px 20px;
+  background: #fff;
+  border-radius: 8px;
+  margin: 20px 0;
+  width: 100%;
+}
+
+.empty-state-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0;
+  width: 100%;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 15px;
+}
+
+.empty-title {
+  font-size: 18px;
+  color: #303133;
+  margin: 0;
+}
+
+.empty-status {
+  font-size: 14px;
+  color: var(--el-color-info);
+  margin: 4px 0;
+}
+
+.empty-hours {
+  font-size: 13px;
+  color: #606266;
+}
+
+.empty-hint {
+  font-size: 14px;
+  color: #909399;
+  margin: 8px 0;
+}
+
+.empty-sub-hint {
+  font-size: 13px;
+  color: #c0c4cc;
+}
+
+/* 添加过渡动画 */
+.el-empty {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  transition: all 0.3s ease;
+}
+
+.el-empty :deep(.el-empty__image) {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  margin-bottom: 20px;
+}
+
+.el-empty :deep(.el-empty__description) {
+  width: 100%;
+  padding: 0 20px;
+}
+
+.empty-state-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0;
+  width: 100%;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 15px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .el-empty :deep(.el-empty__image) {
+    max-width: 200px;
+  }
+  
+  .empty-state-content {
+    max-width: 100%;
+    padding: 0 10px;
+  }
+  
+  .el-empty :deep(.el-empty__description) {
+    font-size: 14px;
+  }
+  
+  .empty-title {
+    font-size: 18px;
+  }
+  
+  .empty-status {
+    font-size: 14px;
+  }
+}
+
+/* 屏幕适配 */
+@media (max-width: 480px) {
+  .el-empty :deep(.el-empty__image) {
+    max-width: 150px;
+  }
+  
+  .empty-state-content {
+    padding: 0 5px;
+  }
+  
+  .el-empty :deep(.el-empty__description) {
+    font-size: 13px;
+  }
+}
+
+.canteen-floors {
+  margin-top: 15px;
+}
+
+.floor-item {
+  background: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.floor-item:active {
+  background: #f5f5f5;
+}
+
+.floor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.floor-name {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.window-count {
+  color: #909399;
+  font-size: 13px;
+}
+
+.window-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.window-tag {
+  background: #f5f5f5;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #606266;
+}
+
+/* 添加美团风格双列布局样式 */
+.meituan-layout {
+  display: flex;
+  margin-top: 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  overflow: hidden;
+  height: calc(100vh - 400px);
+  width: 100%;
+}
+
+.window-list {
+  width: 85px;
+  background: #fff;
+  overflow-y: auto;
+  border-right: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.window-item {
+  padding: 15px 10px;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.window-item.active {
+  background: #f5f5f5;
+  color: var(--el-color-primary);
+}
+
+.window-name {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.window-status {
+  font-size: 11px;
+  color: #67c23a;
+}
+
+.window-status.closed {
+  color: #909399;
+}
+
+.window-hours {
+  font-size: 10px;
+  color: #909399;
+  margin-top: 4px;
+}
+
+.dishes-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  padding-bottom: 140px;
+  height: 100%;
+}
+
+.dish-item {
+  background: #fff;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  padding: 12px;
+  display: flex;
+}
+
+.dish-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 4px;
+  margin-right: 12px;
+}
+
+.dish-info {
+  flex: 1;
+  position: relative;
+}
+
+.dish-name {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.dish-price {
+  color: #f56c6c;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.add-button {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+}
+
+.window-closed,
+.no-window-selected {
+  text-align: center;
+  padding: 40px 0;
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+  font-size: 12px;
+}
+
+.filter-card {
+  margin-bottom: 20px;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  min-width: 200px;
+}
+
+.window-filter-controls {
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #fff;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .filter-controls {
+    flex-direction: column;
+  }
+
+  .filter-item {
+    width: 100%;
+  }
+}
+
+/* 修改购物���相关样式 */
+.cart-wrapper {
+  position: fixed;
+  left: 135px;
+  right: 50px;
+  bottom: 60px;
+  background: #fff;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+/* 修改菜品列表容器样式 */
+.dishes-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  padding-bottom: 140px;
+  height: 100%;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .cart-wrapper {
+    left: 90px; /* 调整为窗口列表宽度 + 间距 */
+  }
+  
+  .dishes-list {
+    padding-bottom: 120px;
+  }
+}
+
+/* 添加购物车内容样式 */
+.cart-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cart-info {
+  flex: 1;
+}
+
+.window-name {
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 4px;
+}
+
+.cart-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cart-total {
+  color: #f56c6c;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.cart-count {
+  color: #909399;
+  font-size: 13px;
+}
+
+.empty-hint {
+  color: #909399;
+  font-size: 14px;
+}
+
+.window-info-card {
+  margin-bottom: 16px;
+  border-radius: 8px;
+}
+
+.window-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.window-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #303133;
+}
+
+.window-tags {
+  display: flex;
+  gap: 8px;
+}
+
+.category-nav {
+  margin: 16px 0;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.category-tag {
+  cursor: pointer;
+  user-select: none;
+}
+
+.category-tag:hover {
+  opacity: 0.8;
+}
+
+.dishes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  padding: 16px 0;
+  width: 100%;
+}
+
+.dish-card {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s;
+  cursor: pointer;
+  border: 1px solid #ebeef5;
+}
+
+.dish-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dish-card-content {
+  padding: 12px;
+}
+
+.dish-image {
+  width: 100%;
+  height: 180px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fa;
+  color: #909399;
+  font-size: 24px;
+}
+
+.dish-info {
+  padding: 0 8px;
+}
+
+.dish-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.dish-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.dish-description {
+  font-size: 13px;
+  color: #909399;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: break-word;
+  overflow: hidden;
+}
+
+.dish-tags {
+  margin: 8px 0;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dish-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.price-info {
+  display: flex;
+  align-items: baseline;
+}
+
+.price-symbol {
+  font-size: 12px;
+  color: #f56c6c;
+}
+
+.price-value {
+  font-size: 20px;
+  font-weight: 500;
+  color: #f56c6c;
+  margin-left: 2px;
+}
+
+.add-button {
+  padding: 8px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .dishes-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dish-card {
+    margin-bottom: 12px;
+  }
+  
+  .window-filter-controls {
+    flex-direction: column;
+  }
+  
+  .filter-item {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+}
+
+/* 优化筛选控件样式 */
+.window-filter-controls {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  min-width: 180px;
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .window-filter-controls {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .filter-item {
+    width: 100%;
+  }
+}
+
+/* 修改右侧内容区域样式 */
+.dishes-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  width: calc(100% - 85px);
+}
+
+/* 响应式调整 */
+@media (max-width: 1400px) {
+  .dishes-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .dishes-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .dishes-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+  
+  .dishes-container {
+    width: calc(100% - 70px);
+  }
+}
+
+@media (max-width: 480px) {
+  .dishes-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 添加悬浮购物车按钮样式 */
+.floating-cart-button {
+  position: fixed;
+  right: 40px;
+  bottom: 100px;
+  z-index: 1000;
+}
+
+.cart-button {
+  width: 50px;
+  height: 50px;
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cart-badge :deep(.el-badge__content) {
+  background-color: #f56c6c;
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translate(50%, -50%);
+  z-index: 1;
+}
+
+/* 购物车抽屉样式 */
+.cart-drawer :deep(.el-drawer__header) {
+  margin-bottom: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.cart-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.cart-drawer-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #303133;
+}
+
+.cart-drawer-content {
   height: 100%;
   display: flex;
   flex-direction: column;
 }
 
-.window-header {
+.cart-window-info {
+  padding: 12px 20px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.cart-items-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 20px;
+}
+
+.cart-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f2f2f2;
+}
+
+.cart-item-image {
+  width: 60px;
+  height: 60px;
+  border-radius: 6px;
+  margin-right: 12px;
+}
+
+.cart-item-info {
+  flex: 1;
+  margin-right: 12px;
+}
+
+.cart-item-name {
+  font-size: 14px;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.cart-item-price {
+  font-size: 15px;
+  color: #f56c6c;
+  font-weight: 500;
+}
+
+.cart-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #ebeef5;
+  background: #fff;
+}
+
+.cart-total-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
 
-.window-name {
-  font-size: 16px;
+.total-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.total-price {
+  font-size: 20px;
+  color: #f56c6c;
   font-weight: 500;
 }
 
-.window-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.checkout-button {
+  width: 100%;
 }
 
-.window-info {
+.empty-cart {
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #666;
-  font-size: 13px;
+  justify-content: center;
+  padding: 40px 20px;
 }
 
-.pagination-wrapper {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
+.empty-cart-icon {
+  color: #909399;
 }
 
 /* 响应式调整 */
 @media (max-width: 768px) {
-  .windows-grid {
-    grid-template-columns: 1fr;
+  .floating-cart-button {
+    right: 20px;
+    bottom: 80px;
+  }
+
+  .cart-button {
+    width: 45px;
+    height: 45px;
+    font-size: 18px;
   }
 }
 
-.floor-plan-container {
-  padding: 20px;
-}
-
-.floor-selector {
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.floor-plan {
+/* 修改楼层导航样式 */
+.floor-nav {
   width: 100%;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-start;
+  padding: 0 20px;  /* 与筛选卡片对齐 */
+}
+
+.floor-nav .nav-list {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  width: calc(100% - 40px);  /* 减去左右padding */
+  gap: 10px;
+}
+
+.floor-nav .nav-item {
+  flex: 1;
   text-align: center;
+  justify-content: center;
+  padding: 12px 0;
+  min-width: 0;
+  font-size: 15px;
+  border: none;
+  transition: all 0.3s ease;
+  margin: 0;
+  position: relative;
+  background: #f0f7ff;  /* 更改默认背景色为淡蓝色 */
+  border-radius: 4px;
+  color: #409EFF;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.floor-plan-image {
-  max-width: 100%;
-  height: auto;
+.floor-nav .nav-item:hover {
+  background: #e6f1fc;
+  color: #409EFF;
+  opacity: 0.8;
+  cursor: pointer;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+.floor-nav .nav-item.active {
+  background: linear-gradient(135deg, #409EFF, #3a8ee6);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .floor-nav {
+    padding: 0 10px;
+  }
+  
+  .floor-nav .nav-list {
+    gap: 8px;
+    width: calc(100% - 20px);
+  }
+
+  .floor-nav .nav-item {
+    font-size: 14px;
+    padding: 10px 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* 添加过渡效果 */
+.floor-nav .nav-item {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 确保与重置按钮宽度对齐 */
+.filter-controls {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  padding: 0 20px;  /* 与楼层导航对齐 */
+}
+
+@media (max-width: 768px) {
+  .filter-controls {
+    padding: 0 10px;
+  }
+}
+
+/* 添加全部菜品展示的样式 */
+.all-dishes-container {
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.dishes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);  /* 两列布局 */
+  gap: 20px;
+  padding: 16px 0;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .dishes-grid {
+    grid-template-columns: 1fr;  /* 移动端单列布局 */
+  }
+}
+
+/* 添加新的样式 */
+.dish-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dish-window-info {
+  font-size: 12px;
+  color: #909399;
+}
+
+.dish-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+/* 调整标签样式 */
+.dish-window-info :deep(.el-tag) {
+  font-size: 12px;
+  height: 20px;
+  line-height: 18px;
+  padding: 0 6px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .dish-title {
+    gap: 2px;
+  }
+  
+  .dish-window-info {
+    font-size: 11px;
+  }
+}
+
+/* 添加一个提示样式 */
+.floor-nav .nav-item.active:hover {
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+/* 修改提示文字的样式 */
+.floor-nav .nav-item.active::after {
+  content: '点击返回全部';
+  position: absolute;
+  bottom: -24px;  /* 调整位置，避免遮挡 */
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: #909399;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;  /* 防止提示文字影响鼠标事件 */
+  z-index: 1;  /* 确保提示文字显示在上层 */
+  background: rgba(255, 255, 255, 0.9);  /* 添加半透明背景 */
+  padding: 4px 8px;  /* 添加内边距 */
+  border-radius: 4px;  /* 圆角 */
+}
+
+.floor-nav .nav-item.active:hover::after {
+  opacity: 1;
+}
+
+/* 添加容器样式以防止提示文字溢出 */
+.nav-section.floor-nav {
+  position: relative;
+  padding-bottom: 24px;  /* 为提示文字预留空间 */
+}
+
+/* 添加新的样式 */
+.cart-window-group {
+  border-bottom: 1px solid #ebeef5;
+  padding: 16px 0;
+}
+
+.cart-window-group:last-child {
+  border-bottom: none;
+}
+
+.cart-window-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  margin-bottom: 12px;
+}
+
+.cart-items-list {
+  padding: 0 20px;
+}
+
+.window-cart-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #ebeef5;
+}
+
+.window-total-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
 </style> 

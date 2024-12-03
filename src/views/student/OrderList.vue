@@ -1,5 +1,16 @@
 <template>
   <div class="order-list">
+    <div class="page-header">
+      <h2 class="page-title">我的订单</h2>
+      <el-button 
+        type="primary" 
+        class="history-btn"
+        @click="goToHistory">
+        <el-icon><Calendar /></el-icon>
+        历史订单
+      </el-button>
+    </div>
+
     <el-tabs v-model="activeTab">
       <el-tab-pane label="进行中" name="ongoing">
         <el-empty v-if="ongoingOrders.length === 0" description="暂无进行中的订单" />
@@ -42,10 +53,16 @@
 
 <script>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { Calendar } from '@element-plus/icons-vue'
 
 export default {
   name: 'OrderList',
+  components: {
+    Calendar
+  },
   setup() {
+    const router = useRouter()
     const activeTab = ref('ongoing')
     const ongoingOrders = ref([])
     const completedOrders = ref([])
@@ -88,6 +105,10 @@ export default {
       return texts[status] || '未知状态'
     }
 
+    const goToHistory = () => {
+      router.push('/student/order-history')
+    }
+
     onMounted(() => {
       // 模拟加载数据
       ongoingOrders.value = mockOrders.filter(order => 
@@ -103,15 +124,45 @@ export default {
       ongoingOrders,
       completedOrders,
       getStatusType,
-      getStatusText
+      getStatusText,
+      goToHistory
     }
   }
 }
 </script>
 
 <style scoped>
-.order-list {
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
   padding: 0 10px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.history-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.history-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+}
+
+.order-list {
+  padding: 20px;
 }
 
 .order-card {
