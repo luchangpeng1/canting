@@ -97,15 +97,20 @@ export default {
 
 <style scoped>
 .preferences {
-  padding: 16px;
+  padding: 4px;
 }
 
 h4 {
-  margin: 0 0 20px;
+  margin: 0 0 12px;
   color: #606266;
 }
 
 .el-divider {
-  margin: 24px 0;
+  margin: 12px 0;
+}
+
+:deep(.el-card) {
+  border-radius: 4px;
+  margin-bottom: 4px;
 }
 </style> 

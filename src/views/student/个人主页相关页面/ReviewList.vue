@@ -88,24 +88,25 @@ export default {
 
 <style scoped>
 .review-list {
-  padding: 16px;
+  padding: 4px;
 }
 
 .review-card {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
+  border-radius: 4px;
 }
 
 .dish-info {
   display: flex;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .dish-image {
   width: 60px;
   height: 60px;
-  border-radius: 4px;
-  margin-right: 12px;
+  border-radius: 3px;
+  margin-right: 8px;
 }
 
 .dish-detail {
@@ -135,13 +136,13 @@ export default {
 }
 
 .review-content {
-  margin: 12px 0;
+  margin: 8px 0;
 }
 
 .review-images {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .review-image {
@@ -152,9 +153,9 @@ export default {
 
 .review-reply {
   background: #f5f7fa;
-  padding: 12px;
-  border-radius: 4px;
-  margin-top: 12px;
+  padding: 8px;
+  border-radius: 3px;
+  margin-top: 8px;
 }
 
 .reply-title {

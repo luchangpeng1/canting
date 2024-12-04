@@ -4,17 +4,19 @@ import FloorDetail from '@/views/student/FloorDetail.vue'
 const routes = [
   {
     path: '/',
-    redirect: '/login'
+    redirect: '/login',
+    meta: { requiresAuth: false }
   },
   {
     path: '/login',
     name: 'Login',
-    component: () => import('../views/Login.vue')
+    component: () => import('../views/Login.vue'),
+    meta: { requiresAuth: false }
   },
   {
     path: '/student',
     component: () => import('../views/student/Layout.vue'),
-    meta: { requiresAuth: true, role: 'student' },
+    meta: { requiresAuth: true, role: 'student', needLogin: true },
     children: [
       {
         path: '',
@@ -38,7 +40,7 @@ const routes = [
       {
         path: 'transactions',
         name: 'StudentTransactions',
-        component: () => import('../views/student/TransactionList.vue')
+        component: () => import('../views/student/个人主页相关页面/TransactionList.vue')
       },
       {
         path: 'favorites',
@@ -61,9 +63,14 @@ const routes = [
         component: () => import('../views/student/个人主页相关页面/Preferences.vue')
       },
       {
-        path: 'my-feedbacks',
+        path: 'feedback-list',
         name: 'StudentFeedbacks',
         component: () => import('../views/student/个人主页相关页面/FeedbackList.vue')
+      },
+      {
+        path: 'wallet',
+        name: 'StudentWallet',
+        component: () => import('../views/student/个人主页相关页面/WalletPage.vue')
       },
       {
         path: 'recommendations',
@@ -94,7 +101,16 @@ const routes = [
         path: 'cart',
         name: 'StudentCart',
         component: () => import('../views/student/CartPage.vue')
-      }
+      },
+      {
+        path: 'points-history',
+        name: 'PointsHistory',
+        component: () => import('../views/student/个人主页相关页面/PointsHistory.vue'),
+        meta: {
+          title: '积分记录',
+          requiresAuth: true
+        }
+      },
     ]
   },
   {
@@ -155,54 +171,41 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory('/canting/'),
+  history: createWebHistory(),
   routes
 })
 
 router.beforeEach((to, from, next) => {
+  // 检查是否有登录信息
+  const hasToken = localStorage.getItem('token')
+  const hasUser = localStorage.getItem('user')
+
+  // 如果没有登录信息，且访问需要登录的页面，重定向到登录页
+  if (!hasToken || !hasUser) {
+    if (to.meta.needLogin) {
+      next('/login')
+      return
+    }
+  }
+
+  // 如果访问登录页
   if (to.path === '/login') {
-    const userStr = localStorage.getItem('user')
-    const token = localStorage.getItem('token')
-    if (userStr && token) {
+    if (hasToken && hasUser) {
       try {
-        const user = JSON.parse(userStr)
+        const user = JSON.parse(hasUser)
         next(user.userType === 'admin' ? '/admin/dishes' : '/student/home')
-        return
-      } catch (error) {
-        localStorage.removeItem('user')
-        localStorage.removeItem('token')
+      } catch {
+        localStorage.clear()
+        next()
       }
+    } else {
+      next()
     }
-    next()
     return
   }
 
-  const userStr = localStorage.getItem('user')
-  const token = localStorage.getItem('token')
-  if (!userStr || !token) {
-    next({
-      path: '/login',
-      query: { redirect: to.fullPath }
-    })
-    return
-  }
-
-  try {
-    const user = JSON.parse(userStr)
-    if (to.matched.some(record => record.meta.role)) {
-      const requiredRole = to.matched.find(record => record.meta.role).meta.role
-      if (user.userType !== requiredRole) {
-        next(user.userType === 'admin' ? '/admin/dishes' : '/student/home')
-        return
-      }
-    }
-    next()
-  } catch (error) {
-    localStorage.removeItem('user')
-    localStorage.removeItem('token')
-    localStorage.removeItem('refreshToken')
-    next('/login')
-  }
+  // 其他情况正常放行
+  next()
 })
 
 export default router 

@@ -16,11 +16,11 @@
     <!-- 订单筛选 -->
     <div class="filter-section">
       <el-radio-group v-model="filterStatus" @change="handleFilterChange">
-        <el-radio-button label="all">全部订单</el-radio-button>
-        <el-radio-button label="pending">待处理</el-radio-button>
-        <el-radio-button label="processing">处理中</el-radio-button>
-        <el-radio-button label="completed">已完成</el-radio-button>
-        <el-radio-button label="cancelled">已取消</el-radio-button>
+        <el-radio-button value="all">全部订单</el-radio-button>
+        <el-radio-button value="pending">待处理</el-radio-button>
+        <el-radio-button value="processing">处理中</el-radio-button>
+        <el-radio-button value="completed">已完成</el-radio-button>
+        <el-radio-button value="cancelled">已取消</el-radio-button>
       </el-radio-group>
 
       <el-date-picker
@@ -64,7 +64,11 @@
               </el-image>
               <div class="dish-info">
                 <h4 class="dish-name">{{ dish.name }}</h4>
-                <p class="dish-price">¥{{ dish.price }} × {{ dish.quantity }}</p>
+                <p class="dish-price">
+                  <span>¥{{ dish.price }}</span>
+                  <span>×</span>
+                  <span>{{ dish.quantity }}</span>
+                </p>
               </div>
             </div>
           </div>
@@ -192,7 +196,7 @@ export default {
       ],
       content: [
         { required: true, message: '请填写评价内容', trigger: 'blur' },
-        { min: 10, message: '评价内容至少10���字', trigger: 'blur' }
+        { min: 10, message: '评价内容至少10字', trigger: 'blur' }
       ]
     }
 
@@ -494,245 +498,240 @@ export default {
 
 <style scoped>
 .order-history {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 8px 6px;
   background-color: #f5f7fa;
   min-height: 100vh;
 }
 
 .back-button {
-  margin-bottom: 24px;
-  padding: 0 20px;
+  margin-bottom: 12px;
+  padding: 0 6px;
 }
 
 .custom-back-btn {
-  height: auto;
-  padding: 8px 0;
-  transition: all 0.3s ease;
+  height: 32px;
+  padding: 6px 0;
 }
 
 .back-content {
-  display: flex;
-  align-items: center;
-  font-size: 15px;
-  color: #606266;
+  font-size: 13px;
 }
 
 .back-icon {
-  margin-right: 8px;
-  font-size: 16px;
-  transition: transform 0.3s ease;
-}
-
-.back-text {
-  position: relative;
-  font-weight: 500;
-}
-
-.back-text::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background-color: #409EFF;
-  transition: width 0.3s ease;
-}
-
-.custom-back-btn:hover .back-content {
-  color: #409EFF;
-}
-
-.custom-back-btn:hover .back-icon {
-  transform: translateX(-4px);
-}
-
-.custom-back-btn:hover .back-text::after {
-  width: 100%;
+  margin-right: 4px;
+  font-size: 14px;
 }
 
 .filter-section {
-  margin-bottom: 24px;
+  margin-bottom: 12px;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.filter-section :deep(.el-radio-group) {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 6px;
+}
+
+.filter-section :deep(.el-radio-button) {
+  margin-right: 0;
+}
+
+.filter-section :deep(.el-radio-button__inner) {
+  padding: 4px 8px;
+  font-size: 12px;
+  height: 28px;
+  border-radius: 4px;
 }
 
 .date-picker {
-  width: 400px;
+  width: 100%;
+  height: 32px;
+}
+
+.date-picker :deep(.el-input__inner) {
+  font-size: 12px;
+  height: 32px;
 }
 
 .orders-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 
 .order-card {
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  border-radius: 6px;
+  margin: 0;
 }
 
 .order-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: none;
 }
 
 .order-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #ebeef5;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
 }
 
 .order-info {
-  display: flex;
-  gap: 24px;
+  gap: 12px;
 }
 
 .order-number {
-  font-weight: 600;
-  color: #303133;
+  font-size: 13px;
 }
 
 .order-time {
-  color: #909399;
+  font-size: 12px;
 }
 
 .status-tag {
-  font-size: 14px;
-  padding: 0 12px;
-  height: 28px;
-  line-height: 26px;
-  border-radius: 14px;
+  font-size: 12px;
+  padding: 0 8px;
+  height: 24px;
+  line-height: 22px;
+  border-radius: 12px;
 }
 
 .dish-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 
 .dish-item {
   display: flex;
-  gap: 16px;
-  padding: 12px;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 6px;
   background: #f8f9fa;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.dish-item:hover {
-  background: #f0f2f5;
+  align-items: flex-start;
 }
 
 .dish-image {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
+  width: 60px;
+  height: 60px;
+  border-radius: 4px;
+  flex-shrink: 0;
   overflow: hidden;
-}
-
-.image-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f5f7fa;
-  color: #909399;
-  font-size: 12px;
 }
 
 .dish-info {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  gap: 4px;
 }
 
 .dish-name {
-  margin: 0 0 8px;
-  font-size: 16px;
-  color: #303133;
+  margin: 0;
+  font-size: 13px;
+  color: #333;
+  font-weight: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dish-price {
   margin: 0;
-  color: #606266;
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .order-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #ebeef5;
-}
-
-.order-total {
-  display: flex;
-  align-items: baseline;
+  margin-top: 10px;
+  padding-top: 10px;
 }
 
 .total-label {
-  font-size: 14px;
-  color: #606266;
+  font-size: 12px;
 }
 
 .total-amount {
-  font-size: 20px;
-  font-weight: bold;
-  color: #f56c6c;
-  margin-left: 8px;
+  font-size: 16px;
+  margin-left: 4px;
 }
 
 .order-actions {
-  display: flex;
-  gap: 12px;
+  gap: 8px;
+}
+
+.order-actions :deep(.el-button) {
+  font-size: 12px;
+  padding: 4px 8px;
 }
 
 .pagination-container {
-  margin-top: 24px;
-  display: flex;
-  justify-content: center;
+  margin-top: 16px;
+  padding: 0 4px;
 }
 
-@media (max-width: 768px) {
+.pagination-container :deep(.el-pagination) {
+  font-size: 12px;
+}
+
+@media screen and (max-width: 393px) {
   .order-history {
-    padding: 12px;
+    padding: 6px 4px;
   }
-
+  
+  .back-button {
+    margin-bottom: 8px;
+  }
+  
   .filter-section {
-    flex-direction: column;
-    align-items: stretch;
+    margin-bottom: 8px;
+    gap: 6px;
   }
+  
+  .orders-list {
+    gap: 6px;
+  }
+  
+  .dish-item {
+    padding: 6px;
+    gap: 6px;
+  }
+  
+  .dish-image {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .dish-name {
+    font-size: 12px;
+  }
+  
+  .dish-price {
+    font-size: 11px;
+  }
+  
+  .total-amount {
+    font-size: 14px;
+  }
+  
+  .order-actions :deep(.el-button) {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+}
 
-  .date-picker {
-    width: 100%;
-  }
+.order-history {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
 
-  .order-info {
-    flex-direction: column;
-    gap: 8px;
-  }
+.order-card,
+.dish-item {
+  transition: none;
+}
 
-  .order-footer {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .order-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
+.order-card:hover,
+.dish-item:hover {
+  transform: none;
+  background: #f8f9fa;
 }
 </style>

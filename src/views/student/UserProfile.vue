@@ -24,11 +24,11 @@
         </div>
       </div>
       <div class="balance-info">
-        <div class="balance-item">
+        <div class="balance-item" @click="handleMenuClick('wallet')" style="cursor: pointer">
           <span class="amount">¥{{ userInfo.balance }}</span>
           <span class="label">余额</span>
         </div>
-        <div class="balance-item">
+        <div class="balance-item" @click="navigateToPage('points-history')" style="cursor: pointer">
           <span class="amount">{{ userInfo.points }}</span>
           <span class="label">积分</span>
         </div>
@@ -39,7 +39,7 @@
     <div class="menu-list">
       <el-card class="menu-card">
         <!-- 钱包相关 -->
-        <div class="menu-item" @click="showRecharge">
+        <div class="menu-item" @click="handleMenuClick('wallet')">
           <div class="menu-icon">
             <el-icon><WalletFilled /></el-icon>
           </div>
@@ -123,6 +123,35 @@
           </div>
           <div class="menu-content">
             <span>关于我们</span>
+            <el-icon><ArrowRight /></el-icon>
+          </div>
+        </div>
+
+        <!-- 积分相关 -->
+        <div class="menu-item" @click="handleMenuClick('points')">
+          <div class="menu-icon">
+            <el-icon><Medal /></el-icon>
+          </div>
+          <div class="menu-content">
+            <span>我的积分</span>
+            <span class="menu-value">{{ userInfo.points }}分</span>
+          </div>
+        </div>
+        <div class="menu-item" @click="showPointsRules">
+          <div class="menu-icon">
+            <el-icon><Document /></el-icon>
+          </div>
+          <div class="menu-content">
+            <span>积分规则</span>
+            <el-icon><ArrowRight /></el-icon>
+          </div>
+        </div>
+        <div class="menu-item" @click="showPointsExchange">
+          <div class="menu-icon">
+            <el-icon><Present /></el-icon>
+          </div>
+          <div class="menu-content">
+            <span>积分兑换</span>
             <el-icon><ArrowRight /></el-icon>
           </div>
         </div>
@@ -214,9 +243,19 @@
       </template>
     </el-dialog>
 
-    <!-- 个人信息编辑对话框 -->
-    <el-dialog v-model="profileEditVisible" title="编辑个人信息" width="90%">
-      <el-form :model="profileForm" label-width="80px">
+    <!-- 个人信息编辑对话 -->
+    <el-dialog 
+      v-model="profileEditVisible" 
+      title="编辑个人信息" 
+      width="90%"
+      :close-on-click-modal="false"
+    >
+      <el-form 
+        ref="profileFormRef"
+        :model="profileForm" 
+        :rules="profileFormRules"
+        label-width="80px"
+      >
         <el-form-item label="头像">
           <el-upload
             class="avatar-uploader"
@@ -224,31 +263,94 @@
             :show-file-list="false"
             :auto-upload="false"
             :on-change="handleAvatarChange"
+            accept="image/*"
           >
-            <img v-if="profileForm.avatar" :src="profileForm.avatar" class="avatar" />
+            <img 
+              v-if="profileForm.avatar" 
+              :src="profileForm.avatar" 
+              class="avatar" 
+            />
             <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
           </el-upload>
+          <div class="upload-tip">支持 jpg、png 格式，大小不超过 2MB</div>
         </el-form-item>
-        <el-form-item label="姓名">
-          <el-input v-model="profileForm.name" />
+        <el-form-item label="姓名" prop="name">
+          <el-input v-model="profileForm.name" maxlength="20" show-word-limit />
         </el-form-item>
-        <el-form-item label="手机号码">
-          <el-input v-model="profileForm.phone" />
+        <el-form-item label="手机号码" prop="phone">
+          <el-input v-model="profileForm.phone" maxlength="11" />
         </el-form-item>
-        <el-form-item label="邮箱">
+        <el-form-item label="邮箱" prop="email">
           <el-input v-model="profileForm.email" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="profileEditVisible = false">取消</el-button>
-        <el-button type="primary" @click="updateProfile">保存</el-button>
+        <el-button 
+          type="primary" 
+          @click="updateProfile"
+          :loading="isUpdatingProfile"
+        >
+          保存
+        </el-button>
       </template>
+    </el-dialog>
+
+    <!-- 积分规则对话框 -->
+    <el-dialog v-model="pointsRulesVisible" title="积分规则" width="90%">
+      <div class="points-rules">
+        <h4>获取积分</h4>
+        <ul>
+          <li>完成订单：<span class="points-value">+2分</span></li>
+          <li>评价订单：<span class="points-value">+3分</span></li>
+          <li>首次使用：<span class="points-value">+10分</span></li>
+          <li>每日签到：<span class="points-value">+1分</span></li>
+        </ul>
+        <h4>积分等级</h4>
+        <ul>
+          <li>普通会员：0-100分</li>
+          <li>白银会员：101-500分</li>
+          <li>黄金会员：501-1000分</li>
+          <li>钻石会员：1000分以上</li>
+        </ul>
+        <h4>会员特权</h4>
+        <ul>
+          <li>白银会员：订单享95折</li>
+          <li>黄金会员：订单享9折</li>
+          <li>钻石会员：订单享85折</li>
+        </ul>
+      </div>
+    </el-dialog>
+
+    <!-- 积分兑换对话框 -->
+    <el-dialog v-model="pointsExchangeVisible" title="积分兑换" width="90%">
+      <div class="exchange-list">
+        <el-card v-for="item in exchangeItems" :key="item.id" class="exchange-item">
+          <div class="exchange-content">
+            <img :src="item.image" :alt="item.name" class="exchange-image">
+            <div class="exchange-info">
+              <h3>{{ item.name }}</h3>
+              <p>{{ item.description }}</p>
+              <div class="exchange-points">
+                需要 <span class="points-value">{{ item.points }}</span> 积分
+              </div>
+            </div>
+          </div>
+          <el-button 
+            type="primary" 
+            @click="handleExchange(item)"
+            :disabled="userInfo.points < item.points"
+          >
+            立即兑换
+          </el-button>
+        </el-card>
+      </div>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   WalletFilled,
@@ -263,9 +365,14 @@ import {
   Plus,
   ArrowRight,
   ChatSquare,
-  Edit
+  Edit,
+  Medal,
+  Document,
+  Present
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { useStore } from 'vuex'
+import { computed } from 'vue'
 
 export default {
   name: 'UserProfile',
@@ -282,19 +389,15 @@ export default {
     Plus,
     ArrowRight,
     ChatSquare,
-    Edit
+    Edit,
+    Medal,
+    Document,
+    Present
   },
   setup() {
     const router = useRouter()
-    const userInfo = ref({
-      name: '张三',
-      studentId: '2021001001',
-      avatar: '',
-      balance: 99.50,
-      points: 280,
-      favorites: 12,
-      feedbacks: 3
-    })
+    const store = useStore()
+    const userInfo = computed(() => store.getters['user/userInfo'])
 
     // 充值相关
     const rechargeVisible = ref(false)
@@ -323,7 +426,7 @@ export default {
       // 模拟根据食堂获取窗口列表
       return [
         { id: 1, name: '特色炒菜' },
-        { id: 2, name: '面食档口' },
+        { id: 2, name: '食档口' },
         // ... 其他窗口
       ]
     }
@@ -338,8 +441,8 @@ export default {
         return
       }
       
+      store.dispatch('user/updateBalance', userInfo.value.balance + rechargeForm.value.amount)
       ElMessage.success(`成功充值 ${rechargeForm.value.amount} 元`)
-      userInfo.value.balance += rechargeForm.value.amount
       rechargeVisible.value = false
     }
 
@@ -388,36 +491,53 @@ export default {
     }
 
     const navigateToPage = (path) => {
-      // 确保路径以 /student 开头
-      if (!path.startsWith('/student/')) {
-        path = '/student' + path
+      try {
+        // 确保路径以 /student 开头
+        if (!path.startsWith('/student/')) {
+          path = '/student/' + path.replace(/^\//, '')
+        }
+        console.log('Navigating to:', path) // 添加日志
+        router.push(path)
+      } catch (error) {
+        console.error('Navigation error:', error) // 添加错误日志
+        ElMessage.error('页面跳转失败')
       }
-      router.push(path)
     }
 
     const handleMenuClick = (command) => {
-      switch (command) {
-        case 'transactions':
-          navigateToPage('/transactions')
-          break
-        case 'favorites':
-          navigateToPage('/favorites')
-          break
-        case 'reviews':
-          navigateToPage('/reviews')
-          break
-        case 'notification-settings':
-          navigateToPage('/notification-settings')
-          break
-        case 'preferences':
-          navigateToPage('/preferences')
-          break
-        case 'my-feedbacks':
-          navigateToPage('/my-feedbacks')
-          break
-        default:
-          console.warn(`未处理的菜单命令: ${command}`)
-          break
+      try {
+        switch (command) {
+          case 'wallet':
+            navigateToPage('wallet')  // 修改这里，去掉前面的斜杠
+            break
+          case 'transactions':
+            navigateToPage('transactions')
+            break
+          case 'favorites':
+            navigateToPage('favorites')
+            break
+          case 'reviews':
+            navigateToPage('reviews')
+            break
+          case 'notification-settings':
+            navigateToPage('notification-settings')
+            break
+          case 'preferences':
+            navigateToPage('preferences')
+            break
+          case 'my-feedbacks':
+            navigateToPage('feedback-list')
+            break
+          case 'points':
+            navigateToPage('points-history')
+            break
+          default:
+            console.warn(`未处理的菜单命令: ${command}`)
+            break
+        }
+      } catch (error) {
+        console.error('Menu click error:', error) // 添加错误日志
+        ElMessage.error('操作失败')
       }
     }
 
@@ -428,6 +548,22 @@ export default {
       phone: '',
       email: ''
     })
+
+    const profileFormRules = ref({
+      name: [
+        { required: true, message: '请输入姓名', trigger: 'blur' },
+        { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
+      ],
+      phone: [
+        { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
+      ],
+      email: [
+        { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+      ]
+    })
+
+    const profileFormRef = ref(null)
+    const isUpdatingProfile = ref(false)
 
     const showEditProfile = () => {
       profileForm.value = {
@@ -440,21 +576,93 @@ export default {
     }
 
     const handleAvatarChange = (file) => {
-      // 这里应该处理头像上传
+      // 验证文件类型和大小
+      const isImage = file.raw.type.startsWith('image/')
+      const isLt2M = file.raw.size / 1024 / 1024 < 2
+
+      if (!isImage) {
+        ElMessage.error('只能上传图片文件!')
+        return
+      }
+      if (!isLt2M) {
+        ElMessage.error('图片大小不能超过 2MB!')
+        return
+      }
+
+      // 创建临时URL预览
       profileForm.value.avatar = URL.createObjectURL(file.raw)
     }
 
-    const updateProfile = () => {
-      // 这里应该调用API更新用户信息
-      userInfo.value = {
-        ...userInfo.value,
-        avatar: profileForm.value.avatar,
-        name: profileForm.value.name,
-        phone: profileForm.value.phone,
-        email: profileForm.value.email
+    const updateProfile = async () => {
+      if (!profileFormRef.value) return
+      
+      try {
+        await profileFormRef.value.validate()
+        
+        isUpdatingProfile.value = true
+        // 合并现有用户信息和更新的个人资料
+        await store.dispatch('user/updateUserInfo', {
+          ...userInfo.value, // 保留原有信息
+          avatar: profileForm.value.avatar,
+          name: profileForm.value.name,
+          phone: profileForm.value.phone,
+          email: profileForm.value.email
+        })
+        
+        ElMessage.success('个人信息更新成功')
+        profileEditVisible.value = false
+      } catch (error) {
+        console.error('更新个人信息失败:', error)
+        ElMessage.error('更新失败，请重试')
+      } finally {
+        isUpdatingProfile.value = false
       }
-      ElMessage.success('个人信息更新成功')
-      profileEditVisible.value = false
+    }
+
+    const pointsRulesVisible = ref(false)
+    const pointsExchangeVisible = ref(false)
+    const exchangeItems = ref([
+      {
+        id: 1,
+        name: '5元代金券',
+        description: '可用于抵扣订单金额',
+        points: 500,
+        image: '/images/voucher.png'
+      },
+      {
+        id: 2,
+        name: '10元代金券',
+        description: '可用于抵扣订单金额',
+        points: 1000,
+        image: '/images/voucher.png'
+      },
+      {
+        id: 3,
+        name: '免配送费券',
+        description: '单次订单免配送费',
+        points: 200,
+        image: '/images/delivery.png'
+      }
+    ])
+
+    const showPointsRules = () => {
+      pointsRulesVisible.value = true
+    }
+
+    const showPointsExchange = () => {
+      pointsExchangeVisible.value = true
+    }
+
+    const handleExchange = async (item) => {
+      try {
+        await store.dispatch('user/exchangePoints', {
+          itemId: item.id,
+          points: item.points
+        })
+        ElMessage.success('兑换成功')
+      } catch (error) {
+        ElMessage.error('兑换失败，请重试')
+      }
     }
 
     return {
@@ -478,7 +686,16 @@ export default {
       profileForm,
       showEditProfile,
       handleAvatarChange,
-      updateProfile
+      updateProfile,
+      profileFormRef,
+      profileFormRules,
+      isUpdatingProfile,
+      pointsRulesVisible,
+      pointsExchangeVisible,
+      exchangeItems,
+      showPointsRules,
+      showPointsExchange,
+      handleExchange
     }
   }
 }
@@ -486,21 +703,21 @@ export default {
 
 <style scoped>
 .user-profile {
-  padding: 16px;
+  padding: 12px 8px;
 }
 
 .user-info-card {
   background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 16px 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.08);
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .info-content {
@@ -523,7 +740,7 @@ export default {
 .balance-info {
   display: flex;
   justify-content: space-around;
-  padding-top: 16px;
+  padding-top: 12px;
   border-top: 1px solid #f5f5f5;
 }
 
@@ -531,36 +748,45 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  transition: all 0.2s ease;
+}
+
+.balance-item:hover {
+  opacity: 0.8;
+  transform: scale(1.05);
 }
 
 .balance-item .amount {
   font-size: 20px;
   font-weight: 600;
   color: var(--el-color-primary);
+  user-select: none;  /* 防止文本被选中 */
 }
 
 .balance-item .label {
   font-size: 12px;
   color: #666;
   margin-top: 4px;
+  user-select: none;  /* 防止文本被选中 */
 }
 
 .menu-list {
   background: #fff;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
+  margin: 0 -8px;
 }
 
 .logout-button {
-  padding: 20px;
+  padding: 16px;
   text-align: center;
 }
 
 .recharge-options {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .recharge-option {
@@ -585,13 +811,14 @@ export default {
 }
 
 .menu-card {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  border-radius: 8px;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
-  padding: 16px;
+  padding: 14px 16px;
   cursor: pointer;
   transition: background-color 0.3s;
 }
@@ -680,5 +907,91 @@ export default {
 
 .edit-text {
   margin-left: 2px;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 8px;
+}
+
+.avatar-uploader :deep(.el-upload:hover) {
+  border-color: var(--el-color-primary);
+}
+
+.avatar-uploader :deep(.el-upload:hover) {
+  border-color: var(--el-color-primary);
+}
+
+.avatar-uploader :deep(.el-upload:hover) {
+  border-color: var(--el-color-primary);
+}
+
+.points-rules {
+  padding: 0 12px;
+}
+
+.points-rules h4 {
+  margin: 16px 0 8px;
+  color: #303133;
+}
+
+.points-rules ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #606266;
+}
+
+.points-rules li {
+  margin: 8px 0;
+}
+
+.points-value {
+  color: var(--el-color-primary);
+  font-weight: 600;
+}
+
+.exchange-list {
+  display: grid;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.exchange-item {
+  border: 1px solid #ebeef5;
+}
+
+.exchange-content {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.exchange-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  margin-right: 16px;
+}
+
+.exchange-info h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.exchange-info p {
+  margin: 0 0 8px;
+  color: #909399;
+  font-size: 14px;
+}
+
+.exchange-points {
+  font-size: 14px;
+}
+
+.balance-item:hover {
+  opacity: 0.8;
+  transform: scale(1.02);
+  transition: all 0.3s ease;
 }
 </style> 

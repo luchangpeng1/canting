@@ -1,27 +1,24 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
+import store from './store'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
-// 添加移动端适配
-const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-if (isMobile) {
-  document.documentElement.classList.add('mobile')
-}
-
 const app = createApp(App)
 
-// 全局错误处理
-app.config.errorHandler = (err, vm, info) => {
-  console.error('全局错误:', err, info)
+// 注册所有图标
+for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+  app.component(key, component)
 }
 
+// 确保 router 在 store 之前使用
 app.use(router)
+   .use(store)
    .use(ElementPlus, {
      locale: zhCn,
-     size: isMobile ? 'small' : 'default', // 移动端使用小号组件
    })
-   .mount('#app') 
+
+app.mount('#app') 

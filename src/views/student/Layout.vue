@@ -3,7 +3,7 @@
   <div class="student-layout">
     <el-container>
       <el-header>
-        <div class="header-title">校园食堂</div>
+        <div class="header-title">GUET智慧食堂</div>
       </el-header>
 
       <el-main>
@@ -188,7 +188,9 @@ export default {
 }
 
 .el-header {
-  padding: 0 20px;
+  padding: 0 12px;
+  height: 44px !important;
+  line-height: 44px;
   border-bottom: 1px solid #eee;
   display: flex;
   justify-content: space-between;
@@ -196,7 +198,7 @@ export default {
 }
 
 .header-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
 }
 
@@ -205,11 +207,12 @@ export default {
 }
 
 .el-main {
-  padding: 20px;
-  padding-bottom: calc(20px + 55px + var(--safe-area-inset-bottom, 0px));
+  padding: 10px 8px;
+  padding-bottom: calc(10px + 55px + var(--safe-area-inset-bottom, 0px));
   overflow-y: auto;
   flex: 1;
   -webkit-overflow-scrolling: touch;
+  background-color: #f5f7fa;
 }
 
 .footer {

@@ -1,7 +1,5 @@
 <template>
   <div class="recommendation-square">
-    <back-header title="餐品推荐广场" />
-    
     <!-- 发布按钮 -->
     <div class="post-action">
       <el-button type="primary" @click="showPostDialog">
@@ -611,23 +609,27 @@ export default RecommendationSquare
 
 <style scoped>
 .recommendation-square {
-  padding: 16px;
+  padding: 8px 6px;
 }
 
 .post-action {
-  margin-bottom: 20px;
-  text-align: right;
+  margin-bottom: 12px;
+  padding: 0 2px;
 }
 
 .post-card {
-  margin-bottom: 20px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.post-card:hover {
+  transform: none;
 }
 
 .post-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  padding: 8px;
 }
 
 .user-info {
@@ -651,18 +653,18 @@ export default RecommendationSquare
 }
 
 .post-content {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  padding: 0 8px;
 }
 
 .post-title {
-  margin: 0 0 12px;
-  font-size: 18px;
+  margin: 0 0 8px;
+  font-size: 16px;
 }
 
 .location-info {
-  margin-bottom: 12px;
-  display: flex;
-  gap: 8px;
+  margin-bottom: 8px;
+  gap: 6px;
 }
 
 .post-text {
@@ -671,30 +673,28 @@ export default RecommendationSquare
 }
 
 .post-images {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 8px;
 }
 
 .post-image {
-  width: 100px;
+  width: calc(33.33% - 4px);
   height: 100px;
   border-radius: 4px;
 }
 
 .post-actions {
-  display: flex;
-  justify-content: space-around;
-  padding: 12px 0;
-  border-top: 1px solid #eee;
+  padding: 8px;
+  border-top: 1px solid #f0f0f0;
 }
 
 .action-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   cursor: pointer;
   color: #606266;
+  font-size: 13px;
 }
 
 .action-item:hover {
@@ -706,13 +706,17 @@ export default RecommendationSquare
 }
 
 .comments-section {
-  margin-top: 16px;
+  background: #fafafa;
+  border-radius: 4px;
+  padding: 12px 8px;
+  margin-top: 12px;
 }
 
 .comment-item {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px;
 }
 
 .comment-content {
@@ -731,9 +735,9 @@ export default RecommendationSquare
 }
 
 .comment-input {
-  margin-top: 16px;
+  margin-top: 12px;
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: flex-start;
 }
 
@@ -743,37 +747,40 @@ export default RecommendationSquare
 
 /* 添加新的样式 */
 .filter-bar {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   display: flex;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
+  padding: 0 2px;
 }
 
 .filter-item {
-  min-width: 120px;
+  min-width: 0;
+  flex: 1;
 }
 
 .image-grid {
-  display: grid;
   gap: 4px;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .image-grid.single-image {
-  grid-template-columns: 1fr;
+  padding: 0 8px;
 }
 
 .image-grid.two-images {
+  padding: 0 8px;
   grid-template-columns: repeat(2, 1fr);
 }
 
 .image-grid.three-images {
+  padding: 0 8px;
   grid-template-columns: repeat(3, 1fr);
 }
 
 .image-grid.four-images {
+  padding: 0 8px;
   grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, 1fr);
 }
 
 .image-item {
@@ -909,5 +916,64 @@ export default RecommendationSquare
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+/* VIVO X80适配 */
+@media screen and (max-width: 393px) {
+  .recommendation-square {
+    padding: 6px 4px;
+  }
+  
+  .post-card {
+    margin-bottom: 6px;
+  }
+  
+  .post-header {
+    padding: 6px;
+  }
+  
+  .post-content {
+    padding: 0 6px;
+  }
+  
+  .post-title {
+    font-size: 15px;
+  }
+  
+  .post-images {
+    padding: 0 6px;
+  }
+  
+  .post-image {
+    height: 90px;
+  }
+  
+  .location-info :deep(.el-tag) {
+    font-size: 10px;
+    padding: 0 4px;
+    height: 18px;
+    line-height: 16px;
+  }
+  
+  .user-info {
+    gap: 8px;
+  }
+  
+  .username {
+    font-size: 13px;
+  }
+  
+  .post-time {
+    font-size: 11px;
+  }
+  
+  .post-text {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  
+  .action-item {
+    font-size: 12px;
+  }
 }
 </style> 
