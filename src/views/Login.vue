@@ -368,6 +368,7 @@
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { isMobile } from '@/utils/device'
 import { 
   User, 
   Setting, 
@@ -392,13 +393,40 @@ const testAccounts = [
     username: 'student001',  // 学生测试账号
     password: '123456',
     userType: 'student',
-    realName: '测试学生'
+    realName: '测试学生',
+    verifiedInfo: {
+      role: 'student'
+    }
   },
   {
-    username: 'admin001',    // 管理员测试账号
+    username: 'admin001',    // PC端超级管理员
+    password: '123456', 
+    userType: 'admin',
+    realName: '超级管理员',
+    verifiedInfo: {
+      role: 'superadmin',
+      permissions: ['all']
+    }
+  },
+  {
+    username: 'window001',   // 移动端窗口管理员
     password: '123456',
     userType: 'admin',
-    realName: '测试管理员'
+    realName: '窗口管理员',
+    verifiedInfo: {
+      role: 'window_admin',
+      canteen: { 
+        id: 1, 
+        name: '中央食堂'
+      },
+      window: { 
+        id: 101, 
+        name: '大荤窗口',
+        floor: 1,
+        type: '大荤窗口',
+        operatingHours: '10:30-13:30, 16:30-19:00'
+      }
+    }
   }
 ]
 
@@ -490,35 +518,36 @@ export default {
             const userInfo = {
               username: testAccount.username,
               userType: testAccount.userType,
-              realName: testAccount.realName
+              realName: testAccount.realName,
+              verifiedInfo: testAccount.verifiedInfo || { // 确保有验证信息
+                role: testAccount.userType === 'admin' ? 'window_admin' : 'student',
+                canteen: { id: 1, name: '中央食堂' },
+                window: { id: 101, name: '大荤窗口' }
+              }
             }
             localStorage.setItem('user', JSON.stringify(userInfo))
             localStorage.setItem('token', 'test-token')
             ElMessage.success('登录成功')
-            router.push(testAccount.userType === 'admin' ? '/admin/dishes' : '/student/home')
+
+            // 根据用户类型和设备判断跳转路径
+            if (testAccount.userType === 'admin') {
+              if (isMobile()) {
+                router.push('/m/admin/orders') // 移动端窗口管理员跳转到订单页面
+              } else {
+                router.push('/admin/dishes') // PC端管理员跳转到菜品管理
+              }
+            } else {
+              router.push('/student/home') // 学生用户跳转到首页
+            }
             return
           }
           ElMessage.error('密码错误')
           return
         }
 
-        // 实际接口调用
-        const response = await http.post('/auth/login', {
-          username: loginData.username,
-          password: loginData.password,
-          userType: loginData.userType
-        })
+        // 如果不是测试账号，显示错误信息
+        ElMessage.error('用户名或密码错误')
         
-        if (response.code === 200) {
-          localStorage.setItem('token', response.data.token)
-          localStorage.setItem('refreshToken', response.data.refreshToken)
-          localStorage.setItem('user', JSON.stringify(response.data.userInfo))
-          
-          ElMessage.success('登录成功')
-          const redirect = router.currentRoute.value.query.redirect || 
-            (response.data.userInfo.userType === 'admin' ? '/admin/dishes' : '/student/home')
-          router.push(redirect)
-        }
       } catch (error) {
         ElMessage.error(error.message || '登录失败，请重试')
       } finally {
@@ -647,7 +676,7 @@ export default {
       qrStatus.value = '等待扫码'
       
       try {
-        // 先使用示例二维码
+        // 先用���例二维码
         qrCodeUrl.value = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=WeChat_Login_GUET'
         
         // 实际项目中，获取真实二维码并开始轮询

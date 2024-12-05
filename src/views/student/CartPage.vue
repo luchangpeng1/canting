@@ -412,22 +412,23 @@ const batchCheckout = () => {
 
 <style scoped>
 .cart-page {
-  padding: 20px;
-  max-width: 800px;
+  padding: 6px;
+  max-width: 100%;
   margin: 0 auto;
   background-color: #f5f7fa;
-  min-height: 100vh;
+  min-height: calc(100vh - 110px);
+  padding-bottom: 50px;
 }
 
 .cart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   background: #fff;
-  padding: 16px 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  padding: 12px 15px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .header-left {
@@ -457,11 +458,29 @@ const batchCheckout = () => {
 
 .cart-window-group {
   background: #fff;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.cart-window-group::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #409eff, #3a8ee6);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.cart-window-group:active::before {
+  opacity: 1;
 }
 
 .cart-window-group:hover {
@@ -470,105 +489,144 @@ const batchCheckout = () => {
 }
 
 .cart-window-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #ebeef5;
-  background: linear-gradient(to right, #f8f9fb, #fff);
+  padding: 12px 15px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+  border-radius: 8px 8px 0 0;
 }
 
 .cart-items-list {
-  padding: 0 20px;
+  padding: 0 12px;
 }
 
 .cart-item {
   display: flex;
   align-items: center;
-  padding: 20px 0;
-  border-bottom: 1px solid #f2f2f2;
-  transition: all 0.3s ease;
+  padding: 10px 8px 10px 36px;
+  border-bottom: 1px solid #f5f5f5;
+  position: relative;
+  transition: background-color 0.2s ease;
+  animation: fadeInRight 0.3s ease;
 }
 
 .cart-item:last-child {
   border-bottom: none;
 }
 
-.cart-item-image {
-  width: 80px;
-  height: 80px;
-  border-radius: 12px;
-  margin-right: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+.cart-item:active {
+  background-color: #f9f9f9;
 }
 
-.cart-item-image:hover {
-  transform: scale(1.05);
+.cart-item-image {
+  width: 65px;
+  height: 65px;
+  border-radius: 6px;
+  margin-right: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  object-fit: cover;
+  transition: transform 0.2s ease;
+  background: #f8f8f8;
+}
+
+.cart-item-image:active {
+  transform: scale(0.95);
 }
 
 .cart-item-info {
   flex: 1;
-  padding: 0 10px;
+  min-width: 0;
 }
 
 .cart-item-name {
-  font-size: 16px;
-  margin-bottom: 8px;
-  color: #303133;
+  font-size: 14px;
+  margin-bottom: 4px;
+  color: #333;
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cart-item-price {
   color: #f56c6c;
-  font-size: 16px;
-  font-weight: 500;
-  display: flex;
-  align-items: baseline;
-}
-
-.cart-item-price::before {
-  content: '¥';
-  font-size: 12px;
-  margin-right: 2px;
+  font-size: 15px;
+  font-weight: 600;
+  position: relative;
+  display: inline-block;
+  padding: 2px 6px;
+  background: rgba(245, 108, 108, 0.1);
+  border-radius: 4px;
 }
 
 .window-cart-footer {
+  padding: 10px 12px;
+  background: #fafafa;
+  border-radius: 0 0 8px 8px;
+  border-top: 1px solid #f0f0f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 20px;
-  border-top: 1px dashed #ebeef5;
-  background: #f8f9fb;
-  border-radius: 0 0 12px 12px;
 }
 
 .window-total-info {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
 }
 
-.total-price {
+.window-total-info .total-label {
+  color: #909399;
+}
+
+.window-total-info .total-price {
   color: #f56c6c;
-  font-size: 18px;
-  font-weight: 500;
-  text-shadow: 0 1px 2px rgba(245, 108, 108, 0.1);
+  font-size: 16px;
+  font-weight: 600;
+  background: rgba(245, 108, 108, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+:deep(.el-button--primary) {
+  margin-left: auto;
 }
 
 .empty-cart {
-  padding: 60px 20px;
+  padding: 40px 20px;
   text-align: center;
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  margin-top: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.empty-cart::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #f56c6c, #ff9896);
+  opacity: 0.5;
 }
 
 .empty-cart-icon {
-  font-size: 48px;
+  font-size: 40px;
   color: #909399;
-  margin-bottom: 20px;
-  opacity: 0.8;
+  margin-bottom: 16px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .cart-footer {
@@ -576,89 +634,166 @@ const batchCheckout = () => {
   bottom: 0;
   left: 0;
   right: 0;
-  background: #fff;
-  padding: 20px 20px;
+  background: rgba(255, 255, 255, 0.98);
+  padding: 6px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-  z-index: 10;
+  box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.95);
+  z-index: 100;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  height: 50px;
 }
 
 .footer-left {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 8px;
 }
 
 .total-info {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 4px;
 }
 
 .total-price {
   color: #f56c6c;
-  font-size: 20px;
-  font-weight: 500;
+  font-size: 18px;
+  font-weight: 600;
 }
 
 /* 调整内容区域，为底部结算栏留出空间 */
 .cart-content {
-  padding-bottom: 80px;
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  height: calc(100vh - 110px);
+  padding-bottom: 5px;
 }
 
 /* 响应式调整 */
 @media (max-width: 768px) {
   .cart-page {
-    padding: 10px;
+    padding: 8px;
+  }
+  
+  .cart-header {
+    padding: 12px 15px;
+    margin-bottom: 12px;
+  }
+
+  .cart-window-group {
+    margin-bottom: 12px;
   }
   
   .cart-item {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 15px;
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 12px 12px 40px;
   }
   
   .cart-item-image {
-    margin-bottom: 15px;
-    width: 100%;
-    height: 160px;
-    object-fit: cover;
+    margin-bottom: 0;
+    width: 70px;
+    height: 70px;
+    margin-right: 12px;
+  }
+  
+  .cart-item-info {
+    flex: 1;
+    padding: 0 8px;
+  }
+
+  .cart-item-name {
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+
+  .cart-item-price {
+    font-size: 14px;
   }
   
   .cart-item-actions {
-    margin-top: 15px;
-    width: 100%;
-    display: flex;
-    justify-content: flex-end;
+    margin-top: 0;
+    width: auto;
+  }
+
+  .window-cart-footer {
+    padding: 12px 15px;
   }
 
   .cart-footer {
-    padding: 12px 15px;
+    padding: 10px 12px;
   }
   
   .footer-left {
-    gap: 12px;
+    gap: 8px;
+  }
+
+  .total-price {
+    font-size: 16px;
+  }
+
+  :deep(.el-button--primary) {
+    padding: 8px 16px;
+  }
+}
+
+/* 针对较窄屏幕的额外优化 */
+@media (max-width: 375px) {
+  .cart-page {
+    padding: 4px;
+  }
+
+  .cart-header h2 {
+    font-size: 16px;
+  }
+
+  .cart-item-image {
+    width: 60px;
+    height: 60px;
+  }
+
+  .cart-item {
+    padding: 8px 8px 8px 32px;
+  }
+
+  .item-checkbox {
+    left: 4px;
+  }
+
+  .cart-item-name {
+    font-size: 13px;
+  }
+
+  .cart-item-price {
+    font-size: 14px;
+  }
+
+  :deep(.el-button--primary) {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  :deep(.el-input-number) {
+    width: 90px;
   }
 }
 
 /* 自定义复选框样式 */
 :deep(.el-checkbox__inner) {
-  border-radius: 999px;
-  width: 24px;
-  height: 24px;
+  border-radius: 4px;
+  width: 18px;
+  height: 18px;
   border: 2px solid #dcdfe6;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 :deep(.el-checkbox__inner::after) {
-  height: 10px;
-  left: 8px;
-  top: 4px;
-  width: 4px;
+  height: 8px;
+  left: 5px;
+  top: 2px;
+  width: 3px;
 }
 
 :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
@@ -680,15 +815,33 @@ const batchCheckout = () => {
 
 /* 自定义按钮样式 */
 :deep(.el-button--primary) {
-  background: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
+  background: linear-gradient(135deg, #409eff, #3a8ee6);
   border: none;
-  padding: 10px 24px;
-  transition: all 0.3s ease;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  height: 36px;
+  display: flex;
+  align-items: center;
 }
 
-:deep(.el-button--primary:hover) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+:deep(.el-button--primary)::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(rgba(255, 255, 255, 0.1), transparent);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+:deep(.el-button--primary:active)::after {
+  opacity: 1;
 }
 
 :deep(.el-button--danger.is-plain) {
@@ -704,46 +857,105 @@ const batchCheckout = () => {
 
 /* 自定义输入框样式 */
 :deep(.el-input-number) {
-  border-radius: 8px;
-  overflow: hidden;
+  border-radius: 6px;
+  width: 100px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
 }
 
-:deep(.el-input-number .el-input__inner) {
-  text-align: center;
+:deep(.el-input-number:focus-within) {
+  box-shadow: 0 2px 4px rgba(64, 158, 255, 0.2);
+}
+
+:deep(.el-input-number .el-input-number__decrease),
+:deep(.el-input-number .el-input-number__increase) {
+  background: #f5f7fa;
+  border-color: #e4e7ed;
+  transition: all 0.2s ease;
+}
+
+:deep(.el-input-number .el-input-number__decrease:active),
+:deep(.el-input-number .el-input-number__increase:active) {
+  background: #e4e7ed;
 }
 
 /* 自定义标签样式 */
 :deep(.el-tag) {
-  border-radius: 6px;
-  padding: 0 12px;
-  height: 24px;
-  line-height: 24px;
-  font-weight: 500;
+  border-radius: 4px;
+  padding: 0 8px;
+  height: 22px;
+  line-height: 20px;
+  font-size: 12px;
 }
 
 /* 添加暗色模式支持 */
 @media (prefers-color-scheme: dark) {
   .cart-page {
-    background-color: #1a1a1a;
+    background-color: #121212;
   }
   
   .cart-window-group,
   .cart-header,
   .empty-cart {
-    background: #2b2b2b;
-    border-color: #3a3a3a;
-  }
-  
-  .cart-item-name {
-    color: #e5e5e5;
+    background: #1e1e1e;
+    border-color: #2c2c2c;
   }
   
   .cart-window-header {
-    background: linear-gradient(to right, #2b2b2b, #333);
+    background: #242424;
+    border-bottom-color: #2c2c2c;
   }
-  
+
+  .cart-item {
+    border-bottom-color: #2c2c2c;
+  }
+
+  .cart-item:active {
+    background-color: #242424;
+  }
+
+  .cart-item-name {
+    color: #e0e0e0;
+  }
+
+  .window-cart-footer {
+    background: #242424;
+    border-top-color: #2c2c2c;
+  }
+
   .cart-footer {
-    background: rgba(43, 43, 43, 0.95);
+    background: rgba(30, 30, 30, 0.98);
+  }
+
+  .cart-window-group::before {
+    background: linear-gradient(90deg, #409eff, #3a8ee6);
+  }
+
+  .cart-item-image {
+    background: #2c2c2c;
+  }
+
+  .cart-item-price {
+    background: rgba(245, 108, 108, 0.15);
+  }
+
+  :deep(.el-input-number .el-input-number__decrease),
+  :deep(.el-input-number .el-input-number__increase) {
+    background: #2c2c2c;
+    border-color: #3a3a3a;
+  }
+
+  :deep(.el-input-number .el-input-number__decrease:active),
+  :deep(.el-input-number .el-input-number__increase:active) {
+    background: #3a3a3a;
+  }
+
+  .cart-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .empty-cart::before {
+    opacity: 0.3;
   }
 }
 
@@ -757,6 +969,30 @@ const batchCheckout = () => {
   align-items: center;
   gap: 12px;
   padding-left: 8px;
+  position: relative;
+}
+
+.window-header-left .el-tag {
+  position: relative;
+  overflow: hidden;
+}
+
+.window-header-left .el-tag::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transform: translateX(-100%);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .cart-item {
@@ -784,6 +1020,90 @@ const batchCheckout = () => {
   
   .item-checkbox {
     left: 8px;
+  }
+}
+
+/* 添加触摸反馈 */
+.cart-item,
+.el-button,
+.el-checkbox {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 添加滑动流畅度优化 */
+.cart-content {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  height: calc(100vh - 140px);
+}
+
+/* 优化加载状态 */
+.cart-window-group {
+  opacity: 0;
+  animation: slideIn 0.3s ease forwards;
+  animation-delay: calc(var(--index, 0) * 0.1s);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 滚动条美化 */
+.cart-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.cart-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cart-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+}
+
+/* 添加商品切换动画 */
+.cart-item {
+  animation: fadeInRight 0.3s ease;
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 添加涟漪效果 */
+.cart-item:active::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(64, 158, 255, 0.2), transparent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple 0.5s ease-out;
+}
+
+@keyframes ripple {
+  to {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
   }
 }
 </style> 

@@ -1,17 +1,30 @@
 <template>
   <div class="dish-list">
-    <!-- 添加悬浮购物车按钮 - 移到最外层 -->
-    <div class="floating-cart-button" 
-         @click="goToCart">
+    <!-- 添加悬浮购物车按钮 -->
+    <div class="floating-cart-button" @click="goToCart">
       <el-badge :value="totalCount" :max="99" class="cart-badge">
         <el-button type="primary" circle class="cart-button">
           <el-icon><ShoppingCart /></el-icon>
         </el-button>
       </el-badge>
     </div>
+
+    <!-- 添加地图显示/隐藏按钮 -->
+    <div class="map-toggle">
+      <el-button 
+        type="primary" 
+        plain
+        size="small"
+        @click="toggleMap"
+        class="toggle-button">
+        <el-icon><Location /></el-icon>
+        {{ isMapVisible ? '收起地图' : '显示地图' }}
+      </el-button>
+    </div>
     
-    <!-- 添加3D地图组件 -->
+    <!-- 修改3D地图组件，添加v-show控制显示/隐藏 -->
     <CampusMap3D 
+      v-show="isMapVisible"
       :canteens="mapCanteens"
       @select-canteen="handleMapCanteenSelect"
       class="map-section"
@@ -313,12 +326,32 @@
                   :class="{ active: selectedWindow?.id === window.id }"
                   @click="selectWindow(window)"
                 >
+                  <div class="window-image">
+                    <el-image
+                      :src="window.image_url || ''"
+                      fit="cover"
+                    >
+                      <template #error>
+                        <div class="window-image-placeholder">
+                          <el-icon><Picture /></el-icon>
+                        </div>
+                      </template>
+                    </el-image>
+                  </div>
                   <div class="window-info">
                     <div class="window-name">{{ window.name }}</div>
                     <div class="window-status" :class="{ closed: !isWindowOpen(window) }">
-                      {{ isWindowOpen(window) ? '营业中' : '已打烊' }}
+                      <el-icon v-if="isWindowOpen(window)"><CircleCheck /></el-icon>
+                      <el-icon v-else><CircleClose /></el-icon>
+                      <span>{{ isWindowOpen(window) ? '营业中' : '已打烊' }}</span>
                     </div>
-                    <div class="window-hours">{{ window.operatingHours }}</div>
+                    <div class="window-hours">
+                      <el-icon><Timer /></el-icon>
+                      <span>{{ window.operatingHours }}</span>
+                    </div>
+                    <div class="window-description" v-if="window.description">
+                      {{ window.description }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -573,7 +606,9 @@ import {
   Picture,
   Search,
   Plus,
-  ShoppingCart
+  ShoppingCart,
+  CircleCheck,
+  CircleClose
 } from '@element-plus/icons-vue'
 import CampusMap3D from './components/CampusMap3D.vue'
 import { ElMessage } from 'element-plus'
@@ -588,8 +623,10 @@ export default {
     Picture,
     Search,
     Plus,
-    CampusMap3D,
-    ShoppingCart
+    ShoppingCart,
+    CircleCheck,
+    CircleClose,
+    CampusMap3D
   },
   setup() {
     const router = useRouter()
@@ -633,33 +670,152 @@ export default {
     const testWindows = {
       '中央食堂': {
         1: [
-          { id: 1, name: '川湘', operatingHours: '10:30-13:30, 16:30-19:00', status: 'open' },
-          { id: 2, name: '粤式炖汤', operatingHours: '10:30-13:30', status: 'closed' },
-          { id: 3, name: '新疆风味', operatingHours: '10:30-19:00', status: 'open' },
-          { id: 4, name: '面食档口', operatingHours: '10:30-19:00', status: 'open' },
-          { id: 5, name: '米饭窗口', operatingHours: '10:30-13:30, 16:30-19:00', status: 'open' }
+          { 
+            id: 1, 
+            name: '川湘', 
+            operatingHours: '10:30-13:30, 16:30-19:00', 
+            status: 'open',
+            image_url: 'https://example.com/window1.jpg',
+            description: '正宗川湘菜系，提供各类特色炒菜、川味小炒'
+          },
+          { 
+            id: 2, 
+            name: '粤式炖汤', 
+            operatingHours: '10:30-13:30', 
+            status: 'closed',
+            image_url: 'https://example.com/window2.jpg',
+            description: '每日新鲜炖汤，滋补养生'
+          },
+          { 
+            id: 3, 
+            name: '新疆风味', 
+            operatingHours: '10:30-19:00', 
+            status: 'open',
+            image_url: 'https://example.com/window3.jpg',
+            description: '地道新疆美食，大盘鸡、手抓饭'
+          },
+          { 
+            id: 4, 
+            name: '面食档口', 
+            operatingHours: '10:30-19:00', 
+            status: 'open',
+            image_url: 'https://example.com/window4.jpg',
+            description: '各式面食，现煮现卖'
+          },
+          { 
+            id: 5, 
+            name: '米饭窗口', 
+            operatingHours: '10:30-13:30, 16:30-19:00', 
+            status: 'open',
+            image_url: 'https://example.com/window5.jpg',
+            description: '提供各类盖浇饭、套餐'
+          }
         ],
         2: [
-          { id: 6, name: '特色小炒', operatingHours: '10:30-19:00', status: 'open' },
-          { id: 7, name: '清真窗口', operatingHours: '10:30-19:00', status: 'open' },
-          { id: 8, name: '东北菜', operatingHours: '10:30-19:00', status: 'open' },
-          { id: 9, name: '快餐套餐', operatingHours: '10:30-19:00', status: 'open' }
+          { 
+            id: 6, 
+            name: '特色小炒', 
+            operatingHours: '10:30-19:00', 
+            status: 'open',
+            image_url: 'https://example.com/window6.jpg',
+            description: '现炒菜品，可自选搭配'
+          },
+          { 
+            id: 7, 
+            name: '清真窗口', 
+            operatingHours: '10:30-19:00', 
+            status: 'open',
+            image_url: 'https://example.com/window7.jpg',
+            description: '提供清真认证的美食'
+          },
+          { 
+            id: 8, 
+            name: '东北菜', 
+            operatingHours: '10:30-19:00', 
+            status: 'open',
+            image_url: 'https://example.com/window8.jpg',
+            description: '东北特色菜品，份量实惠'
+          },
+          { 
+            id: 9, 
+            name: '快餐套餐', 
+            operatingHours: '10:30-19:00', 
+            status: 'open',
+            image_url: 'https://example.com/window9.jpg',
+            description: '经济实惠的快餐套餐'
+          }
         ],
         3: [
-          { id: 10, name: '火锅窗口', operatingHours: '10:30-19:00', status: 'open' },
-          { id: 11, name: '饮品店', operatingHours: '08:30-20:00', status: 'open' },
-          { id: 12, name: '水���店', operatingHours: '08:30-20:00', status: 'open' }
+          { 
+            id: 10, 
+            name: '火锅窗口', 
+            operatingHours: '10:30-19:00', 
+            status: 'open',
+            image_url: 'https://example.com/window10.jpg',
+            description: '自选火锅，多种口味'
+          },
+          { 
+            id: 11, 
+            name: '饮品店', 
+            operatingHours: '08:30-20:00', 
+            status: 'open',
+            image_url: 'https://example.com/window11.jpg',
+            description: '奶茶、果汁、咖啡'
+          },
+          { 
+            id: 12, 
+            name: '水果店', 
+            operatingHours: '08:30-20:00', 
+            status: 'open',
+            image_url: 'https://example.com/window12.jpg',
+            description: '新鲜水果，每日配送'
+          }
         ]
       },
       '沁园餐厅': {
         1: [
-          { id: 13, name: '自选快餐', operatingHours: '10:30-19:00', status: 'open' },
-          { id: 14, name: '面食档口', operatingHours: '10:30-19:00', status: 'open' },
-          { id: 15, name: '饮品店', operatingHours: '08:30-20:00', status: 'open' }
+          { 
+            id: 13, 
+            name: '自选快餐', 
+            operatingHours: '10:30-19:00', 
+            status: 'open',
+            image_url: 'https://example.com/window13.jpg',
+            description: '自选菜品，搭配更自由'
+          },
+          { 
+            id: 14, 
+            name: '面食档口', 
+            operatingHours: '10:30-19:00', 
+            status: 'open',
+            image_url: 'https://example.com/window14.jpg',
+            description: '各式面食，现做现卖'
+          },
+          { 
+            id: 15, 
+            name: '饮品店', 
+            operatingHours: '08:30-20:00', 
+            status: 'open',
+            image_url: 'https://example.com/window15.jpg',
+            description: '饮品甜点，解暑解馋'
+          }
         ],
         2: [
-          { id: 16, name: '特色炒菜', operatingHours: '10:30-19:00', status: 'open' },
-          { id: 17, name: '盖浇饭', operatingHours: '10:30-19:00', status: 'open' }
+          { 
+            id: 16, 
+            name: '特色炒菜', 
+            operatingHours: '10:30-19:00', 
+            status: 'open',
+            image_url: 'https://example.com/window16.jpg',
+            description: '各式炒菜，可自选搭配'
+          },
+          { 
+            id: 17, 
+            name: '盖浇饭', 
+            operatingHours: '10:30-19:00', 
+            status: 'open',
+            image_url: 'https://example.com/window17.jpg',
+            description: '多种盖浇饭，经济实惠'
+          }
         ]
       }
     }
@@ -693,7 +849,7 @@ export default {
           id: 3,
           name: '回锅肉',
           price: 18,
-          description: '传统川式回锅肉',
+          description: '传统���式回锅肉',
           category: '川菜',
           taste: 'savory',
           image_url: 'https://example.com/huiguo.jpg',
@@ -741,7 +897,7 @@ export default {
           id: 7,
           name: '担担面',
           price: 12,
-          description: '正宗川式���担面，香辣可口',
+          description: '正宗川式������面，香辣可口',
           category: '面食',
           taste: 'spicy',
           image_url: 'https://example.com/dandanmian.jpg',
@@ -811,7 +967,7 @@ export default {
     }
 
     // 测试数据 - 菜品分类
-    const categories = ['川菜', '本帮菜', '粤菜', '面食', '素菜', '饮品']
+    const categories = ['川菜', '本帮��', '粤菜', '面食', '素菜', '饮品']
 
     // 添加菜品分类样式映射函数
     const getCategoryType = (category) => {
@@ -903,7 +1059,7 @@ export default {
       }
     }
 
-    // 修改加载窗口菜品的函数
+    // ��改加载窗口菜品的函数
     const loadWindowDishes = async (windowId) => {
       try {
         // 使用测试数据
@@ -1089,7 +1245,7 @@ export default {
       router.push(`/student/dishes/${dishId}`)
     }
 
-    // 在 setup 中添加新的方法
+    // 在 setup 中添���新的方法
     const getTasteLabel = (taste) => {
       const tasteMap = {
         'spicy': '麻辣',
@@ -1110,7 +1266,7 @@ export default {
       return typeMap[taste] || ''
     }
 
-    // 在 setup 中添加购物车相关的响应式数据和方法
+    // 在 setup 中添加购物车相关的响应���数据和方法
     const cartData = ref({}) // 使用对象存储每个窗口的购物车数据
     const cartDrawerVisible = ref(false)
     const checkoutDialogVisible = ref(false)
@@ -1285,7 +1441,7 @@ export default {
             selectedFloor.value = state.selectedFloor
             await nextTick()
             
-            // 恢复窗口选择
+            // 恢复窗口选���
             if (state.selectedWindow) {
               const windowList = getFloorWindows(state.activeCanteen, state.selectedFloor)
               const window = windowList.find(w => w.id === state.selectedWindow.id)
@@ -1331,7 +1487,7 @@ export default {
       }
     })
 
-    // 添加防抖函数
+    // 添���防抖函数
     const debounce = (fn, delay) => {
       let timer = null
       return function (...args) {
@@ -1468,7 +1624,7 @@ export default {
       return '';
     };
 
-    // 添加一个新的计算属性来检查购物��是否有商品
+    // 添加一个新的计算属性来检查购物车是否有商品
     const hasCartItems = computed(() => {
       return cartData.value && Object.values(cartData.value).some(items => items.length > 0)
     })
@@ -1508,6 +1664,14 @@ export default {
     // 在 setup 中添加跳转方法
     const goToCart = () => {
       router.push('/student/cart')
+    }
+
+    // 添加地图显示状态的响应式变量
+    const isMapVisible = ref(true)
+
+    // 添加切换地图显示/隐藏���方法
+    const toggleMap = () => {
+      isMapVisible.value = !isMapVisible.value
     }
 
     return {
@@ -1577,7 +1741,9 @@ export default {
       getWindowTotal,
       getWindowCount,
       clearWindowCart,
-      goToCart
+      goToCart,
+      isMapVisible,
+      toggleMap
     }
   }
 }
@@ -1593,8 +1759,8 @@ export default {
 }
 
 .canteen-info {
-  margin-bottom: 10px;
-  border-radius: 8px;
+  margin-bottom: 6px; /* 从10px减小到6px */
+  border-radius: 6px; /* 从8px减小到6px */
 }
 
 .canteen-header {
@@ -1749,8 +1915,8 @@ export default {
 .map-section {
   width: 100%;
   height: 300px;
-  margin-bottom: 20px;
-  border-radius: 8px;
+  margin-bottom: 10px; /* 从20px减小到10px */
+  border-radius: 6px; /* 从8px减小到6px */
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   position: relative;
@@ -1912,14 +2078,15 @@ export default {
 }
 
 .filter-card {
-  margin-bottom: 10px;
-  border-radius: 8px;
+  margin-bottom: 6px; /* 从10px减小到6px */
+  border-radius: 6px;
 }
 
 .filter-controls {
   display: flex;
-  gap: 15px;
+  gap: 8px; /* 从15px减小到8px */
   flex-wrap: wrap;
+  padding: 0 10px; /* 从20px减小到10px */
 }
 
 .filter-item {
@@ -2121,56 +2288,201 @@ export default {
   background: #f5f5f5;
   border-radius: 0; /* 移除圆角 */
   overflow: hidden;
-  height: calc(100vh - 400px);
+  height: calc(100vh - 140px); /* 从180px减小到140px */
   width: 100%;
 }
 
 .window-list {
-  width: 85px;
+  width: 110px;
   background: #fff;
   overflow-y: auto;
   border-right: 1px solid #eee;
   flex-shrink: 0;
+  padding: 4px;
 }
 
 .window-item {
-  padding: 15px 10px;
-  border-bottom: 1px solid #f5f5f5;
+  padding: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 4px;
+  border: 1px solid transparent;
+}
+
+.window-item:hover {
+  background: #f5f7fa;
 }
 
 .window-item.active {
-  background: #f5f5f5;
-  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary-light-5);
+}
+
+/* 添加窗口图片样式 */
+.window-image {
+  width: 94px;
+  height: 64px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f5f7fa;
+  margin-bottom: 4px;
+}
+
+.window-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 窗口信息容器 */
+.window-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .window-name {
   font-size: 13px;
   font-weight: 500;
-  margin-bottom: 4px;
+  color: #303133;
+  margin: 0;
+  line-height: 1.3;
 }
 
+/* 营业状态样式 */
 .window-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: #f0f9eb;
   color: #67c23a;
+  width: fit-content;
 }
 
 .window-status.closed {
+  background: #f4f4f5;
   color: #909399;
 }
 
+.window-status .el-icon {
+  font-size: 12px;
+}
+
+/* 营业时间样式 */
 .window-hours {
-  font-size: 10px;
+  font-size: 11px;
   color: #909399;
-  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.window-hours .el-icon {
+  font-size: 12px;
+}
+
+/* 窗口描述样式 */
+.window-description {
+  font-size: 11px;
+  color: #666;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+   line-clamp: 2;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+/* VIVO X80等移动端适配 */
+@media screen and (max-width: 393px) {
+  .window-list {
+    width: 100px;
+    padding: 3px;
+  }
+  
+  .window-item {
+    padding: 6px;
+  }
+  
+  .window-image {
+    width: 86px;
+    height: 58px;
+  }
+  
+  .window-name {
+    font-size: 12px;
+  }
+  
+  .window-status {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+  
+  .window-hours,
+  .window-description {
+    font-size: 10px;
+  }
+}
+
+/* 添加图片加载占位效果 */
+.window-image-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #f5f7fa 25%, #e4e7ed 50%, #f5f7fa 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.window-image-placeholder .el-icon {
+  font-size: 20px;
+  color: #909399;
+}
+
+/* 调整窗口列表滚动条样式 */
+.window-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.window-list::-webkit-scrollbar-thumb {
+  background: #e4e7ed;
+  border-radius: 2px;
+}
+
+.window-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 添加窗口切换动画 */
+.window-item {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dishes-list {
   flex: 1;
   overflow-y: auto;
-  padding: 10px;
-  padding-bottom: 140px;
+  padding: 0 0 60px 0; /* 从120px减小到60px */
   height: 100%;
 }
 
@@ -2260,7 +2572,7 @@ export default {
   }
 }
 
-/* 修改购物���相关样式 */
+/* 修改购物相关样式 */
 .cart-wrapper {
   position: fixed;
   left: 135px;
@@ -2333,8 +2645,8 @@ export default {
 }
 
 .window-info-card {
-  margin-bottom: 16px;
-  border-radius: 8px;
+  margin-bottom: 8px; /* 从16px减小到8px */
+  border-radius: 6px;
 }
 
 .window-header {
@@ -2355,9 +2667,9 @@ export default {
 }
 
 .category-nav {
-  margin: 16px 0;
+  margin: 6px 0; /* 从16px减小到6px */
+  gap: 4px; /* 从8px减小到4px */
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -2373,9 +2685,10 @@ export default {
 .dishes-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 6px; /* 进一步减小间距 */
-  padding: 0; /* 移除内边距 */
+  gap: 4px; /* 从8px减小到4px */
+  padding: 2px; /* 从4px减小到2px */
   width: 100%;
+  margin: 0;
 }
 
 .dish-card {
@@ -2392,7 +2705,7 @@ export default {
 }
 
 .dish-card-content {
-  padding: 12px;
+  padding: 4px; /* 从8px减小到4px */
 }
 
 .dish-image {
@@ -2414,7 +2727,7 @@ export default {
 }
 
 .dish-info {
-  padding: 0 8px;
+  padding: 0 2px; /* 从4px减小到2px */
 }
 
 .dish-header {
@@ -2439,9 +2752,9 @@ export default {
 }
 
 .dish-tags {
-  margin: 8px 0;
+  margin: 2px 0; /* 从4px减小到2px */
+  gap: 2px; /* 从4px减小到2px */
   display: flex;
-  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -2449,7 +2762,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 12px;
+  margin-top: 4px; /* 从8px减小到4px */
 }
 
 .price-info {
@@ -2559,14 +2872,15 @@ export default {
 /* 添加悬浮购物车按钮样式 */
 .floating-cart-button {
   position: fixed;
-  right: 12px;
-  bottom: 70px;
-  z-index: 1000;
+  right: 16px;
+  bottom: 80px;
+  z-index: 1002; /* 确保在地图切换按钮之上 */
+  cursor: pointer;
 }
 
 .cart-button {
-  width: 50px;
-  height: 50px;
+  width: 48px;
+  height: 48px;
   font-size: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -2691,24 +3005,31 @@ export default {
 /* 响应式调整 */
 @media (max-width: 768px) {
   .floating-cart-button {
-    right: 20px;
-    bottom: 80px;
+    right: 12px;
+    bottom: 70px;
   }
 
   .cart-button {
-    width: 45px;
-    height: 45px;
+    width: 40px;
+    height: 40px;
     font-size: 18px;
+  }
+
+  .cart-badge :deep(.el-badge__content) {
+    font-size: 12px;
+    padding: 0 4px;
+    height: 16px;
+    line-height: 16px;
   }
 }
 
 /* 修改楼层导航样式 */
 .floor-nav {
   width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: 10px; /* 从20px减小到10px */
   display: flex;
   justify-content: flex-start;
-  padding: 0 20px;  /* 与筛选��片对齐 */
+  padding: 0 10px; /* 从20px减小到10px */
 }
 
 .floor-nav .nav-list {
@@ -2716,7 +3037,7 @@ export default {
   flex-direction: row;
   justify-content: flex-start;
   width: calc(100% - 40px);  /* 减去左右padding */
-  gap: 10px;
+  gap: 6px; /* 从10px减小到6px */
 }
 
 .floor-nav .nav-item {
@@ -2754,11 +3075,11 @@ export default {
 /* 响应式调整 */
 @media (max-width: 768px) {
   .floor-nav {
-    padding: 0 10px;
+    padding: 0 6px;
   }
   
   .floor-nav .nav-list {
-    gap: 8px;
+    gap: 3px;
     width: calc(100% - 20px);
   }
 
@@ -2774,23 +3095,23 @@ export default {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 确保与重置按钮宽度对齐 */
+/* 确保与重置按钮度对齐 */
 .filter-controls {
   display: flex;
-  gap: 15px;
+  gap: 8px; /* 从15px减小到8px */
   flex-wrap: wrap;
-  padding: 0 20px;  /* 与楼层导航对齐 */
+  padding: 0 10px; /* 从20px减小到10px */
 }
 
 @media (max-width: 768px) {
   .filter-controls {
-    padding: 0 10px;
+    padding: 0 6px;
   }
 }
 
 /* 添加全部菜品展示的样式 */
 .all-dishes-container {
-  padding: 4px; /* 减小��边距 */
+  padding: 4px; /* 减小边距 */
   background: transparent; /* 移除背景色 */
 }
 
@@ -2865,7 +3186,7 @@ export default {
   opacity: 0;
   transition: opacity 0.3s;
   pointer-events: none;  /* 防止提示文字影响鼠标事件 */
-  z-index: 1;  /* 确保提示文字显示在上层 */
+  z-index: 1;  /* 确保提示文字显示在上 */
   background: rgba(255, 255, 255, 0.9);  /* 添加半透明背景 */
   padding: 4px 8px;  /* 添加内边距 */
   border-radius: 4px;  /* 圆角 */
@@ -2884,7 +3205,7 @@ export default {
 /* 添加新的样式 */
 .cart-window-group {
   border-bottom: 1px solid #ebeef5;
-  padding: 16px 0;
+  padding: 8px 0; /* 从16px减小到8px */
 }
 
 .cart-window-group:last-child {
@@ -2895,20 +3216,20 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
-  margin-bottom: 12px;
+  padding: 0 10px; /* 从20px减小到10px */
+  margin-bottom: 6px; /* 从12px减小到6px */
 }
 
 .cart-items-list {
-  padding: 0 20px;
+  padding: 0 10px; /* 从20px减小到10px */
 }
 
 .window-cart-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 6px; /* 从12px减小到6px */
+  padding-top: 6px; /* 从12px减小到6px */
   border-top: 1px dashed #ebeef5;
 }
 
@@ -3014,48 +3335,45 @@ export default {
 /* 适配VIVO X80的媒体查询 */
 @media screen and (max-width: 393px) {
   .dishes-grid {
-    padding: 6px;
-    gap: 6px;
+    gap: 2px; /* 进一步减小间距 */
+    padding: 1px;
+  }
+  
+  .filter-controls {
+    padding: 0 6px;
+    gap: 4px;
+  }
+  
+  .filter-group {
+    gap: 2px;
   }
   
   .dish-card-content {
-    padding: 6px;
+    padding: 3px;
   }
   
-  .dish-image {
-    height: 100px;
+  /* 减小卡片阴影和圆角 */
+  .dish-card {
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   }
   
-  .dish-name {
-    font-size: 13px;
+  /* 调整窗口和餐厅卡片的边距 */
+  .window-info-card,
+  .canteen-info,
+  .filter-card {
+    margin-bottom: 4px;
+    border-radius: 4px;
   }
   
-  .dish-description {
-    font-size: 11px;
-  }
-  
-  .price-value {
-    font-size: 14px;
-  }
-  
-  /* 调整筛选控件布局 */
-  .filter-controls {
-    padding: 0 6px;
-    gap: 8px;
-  }
-  
-  .filter-item {
-    min-width: 0;
-  }
-  
-  /* 调整楼层导航 */
+  /* 减小楼层导航的间距 */
   .floor-nav {
+    margin-bottom: 6px;
     padding: 0 6px;
   }
   
-  .floor-nav .nav-item {
-    padding: 8px 0;
-    font-size: 13px;
+  .floor-nav .nav-list {
+    gap: 3px;
   }
 }
 
@@ -3083,8 +3401,8 @@ export default {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
-  padding: 4px; /* 减小整体padding */
-  width: 100%;
+  padding: 4px; /* 减整体padding */
+    width: 100%;
   margin: 0; /* 确保没有额外边距 */
 }
 
@@ -3095,7 +3413,7 @@ export default {
 
 /* 修改all-dishes-container的样式 */
 .all-dishes-container {
-  padding: 8px 6px; /* 减小内边距 */
+  padding: 8px 6px; /* 减小边距 */
   background: #fff;
   border-radius: 8px;
 }
@@ -3157,21 +3475,21 @@ export default {
 
 /* 调整列表容器样式 */
 .dishes-list {
-  padding: 0 0 120px 0; /* 只保留底部padding，移除左右padding */
+  padding: 0 0 60px 0; /* 从120px减小到60px */
 }
 
 /* 修改filter-controls的样式 */
 .filter-controls {
   display: flex;
-  gap: 15px;
+  gap: 8px; /* 从15px减小到8px */
   flex-wrap: wrap;
-  padding: 0 20px;
+  padding: 0 10px; /* 从20px减小到10px */
 }
 
 /* 添加新的样式类用于口味和价格筛选的容器 */
 .filter-group {
   display: flex;
-  gap: 15px;
+  gap: 4px; /* 从8px减小到4px */
   flex: 1;
 }
 
@@ -3198,11 +3516,11 @@ export default {
     width: 100%;
   }
 
-  /* 让筛选框在移动端各占50%宽度 */
+  /* 让筛选框在��动端各占50%宽度 */
   .filter-group .filter-item {
     flex: 1; /* 均分空间 */
     min-width: 0; /* 移除最小宽度限制 */
-    width: calc(50% - 4px); /* 考虑间���的50%宽度 */
+    width: calc(50% - 4px); /* 考虑间距的50%宽度 */
   }
 
   /* 调整下拉框的样式使其更紧凑 */
@@ -3250,7 +3568,7 @@ export default {
 .search-wrapper {
   width: 100%;
   display: flex;
-  gap: 8px;
+  gap: 4px; /* 从8px减小到4px */
   align-items: stretch; /* 确保子元素等高 */
 }
 
@@ -3314,7 +3632,7 @@ export default {
   .filter-group {
     gap: 4px;
     padding: 0;
-    width: 100%;
+  width: 100%;
     margin: 0;
   }
 
@@ -3380,6 +3698,404 @@ export default {
   /* 搜索框 */
   .search-filter :deep(.el-input__wrapper) {
     padding: 0 8px;
+  }
+}
+
+/* 添加地图切换按钮样式 */
+.map-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1001;
+}
+
+.toggle-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 修改地图组件样式，添加过渡效果 */
+.map-section {
+  transition: all 0.3s ease;
+  height: 300px;
+  margin-bottom: 10px; /* 从20px减小到10px */
+  border-radius: 6px; /* 从8px减小到6px */
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+/* VIVO X80等移动端适配 */
+@media screen and (max-width: 393px) {
+  .map-toggle {
+    top: 4px;
+    right: 4px;
+  }
+
+  .toggle-button {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  .toggle-button .el-icon {
+    font-size: 14px;
+  }
+
+  .map-section {
+    height: 200px;
+    margin-bottom: 6px; /* 从10px减小到6px */
+  }
+}
+
+/* 修改空状态容器的样式 */
+.no-window-selected {
+  height: calc(100vh - 140px); /* 从180px减小到140px */
+  text-align: center;
+  padding: 0;
+  background: #fff;
+  border-radius: 8px;
+  margin: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 修改el-empty组件的样式 */
+.no-window-selected :deep(.el-empty) {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+/* 调整空状态内容的布局 */
+.empty-state-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0 15px;
+}
+
+/* VIVO X80等移动端适配 */
+@media screen and (max-width: 393px) {
+  .no-window-selected {
+    height: calc(100vh - 120px); /* 从160px减小到120px */
+  }
+  
+  .dishes-list {
+    padding: 0 0 50px 0; /* 从60px减小到50px */
+  }
+  
+  .dishes-container {
+    padding: 0 4px 4px 4px; /* 从6px减小到4px */
+  }
+  
+  .empty-state-content {
+    padding: 0 10px;
+  }
+  
+  .empty-hint {
+    font-size: 14px;
+  }
+  
+  .empty-sub-hint {
+  font-size: 12px;
+  }
+}
+
+/* 修改列表容器的底部padding */
+.dishes-list {
+  padding: 0 0 60px 0; /* 从120px减小到60px */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* 修改meituan-layout的样式确保内容区域正确填充 */
+.meituan-layout {
+  margin: 0;
+  width: 100%;
+  height: calc(100vh - 140px); /* 从180px减小到140px */
+  overflow: hidden;
+}
+
+/* 修改dishes-container的样式 */
+.dishes-container {
+  padding: 0 6px 6px 6px; /* 从10px减小到6px */
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 修改下拉框的最大高度 */
+.filter-group :deep(.el-select-dropdown__wrap) {
+  max-height: 160px !important; /* 减小最大高度 */
+}
+
+:deep(.el-select-dropdown) {
+  margin-top: 4px !important;
+  max-height: 200px !important; /* 设置整个下拉菜单的最大高度 */
+}
+
+/* 优化下拉选项的样式 */
+:deep(.el-select-dropdown__item) {
+  height: 32px; /* 减小选项高度 */
+  line-height: 32px;
+  padding: 0 8px;
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 393px) {
+  :deep(.el-select-dropdown__wrap) {
+    max-height: 120px !important; /* 移动端更小的高度 */
+  }
+  
+  :deep(.el-select-dropdown) {
+    margin-top: 2px !important;
+    max-height: 160px !important;
+  }
+  
+  :deep(.el-select-dropdown__item) {
+    height: 28px;
+    line-height: 28px;
+    font-size: 12px;
+  }
+}
+
+/* 修改dishes-grid的样式 */
+.dishes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px; /* 减小卡片间距 */
+  padding: 4px;
+  width: 100%;
+}
+
+/* 优化菜品卡片样式 */
+.dish-card {
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: all 0.3s;
+  cursor: pointer;
+  border: 1px solid #ebeef5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.dish-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 调整���片样式 */
+.dish-image {
+  width: 100%;
+  height: 140px; /* 调整图片高度 */
+  object-fit: cover;
+  border-radius: 4px 4px 0 0;
+  margin-bottom: 0;
+}
+
+/* 优化卡片内容区域 */
+.dish-card-content {
+  padding: 8px;
+}
+
+.dish-info {
+  padding: 0;
+}
+
+/* 优化菜品名称样式 */
+.dish-name {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  line-height: 1.3;
+  /* 超出两行显示省略号 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+/* 优化描述文字样式 */
+.dish-description {
+  font-size: 12px;
+  color: #666;
+  margin: 4px 0;
+  line-height: 1.4;
+  /* 超出一行显示省略号 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+}
+
+/* 优化标签样式 */
+.dish-tags {
+  margin: 6px 0;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.dish-tags :deep(.el-tag) {
+  font-size: 10px;
+  padding: 0 4px;
+  height: 18px;
+  line-height: 16px;
+  border-radius: 2px;
+}
+
+/* 优化价格和按钮区域 */
+.dish-footer {
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price-info {
+  display: flex;
+  align-items: baseline;
+}
+
+.price-symbol {
+  font-size: 12px;
+  color: #f56c6c;
+}
+
+.price-value {
+  font-size: 18px;
+  font-weight: 500;
+  color: #f56c6c;
+  margin-left: 2px;
+}
+
+.add-button {
+  padding: 4px;
+  height: 28px;
+  width: 28px;
+  border-radius: 4px;
+}
+
+.add-button :deep(.el-icon) {
+  font-size: 16px;
+}
+
+/* 优化窗口信息标签 */
+.dish-window-info {
+  margin-top: 2px;
+}
+
+.dish-window-info :deep(.el-tag) {
+  font-size: 10px;
+  height: 18px;
+  line-height: 16px;
+  padding: 0 4px;
+  background: #f5f7fa;
+  border: none;
+  color: #909399;
+}
+
+/* VIVO X80等移动端适配 */
+@media screen and (max-width: 393px) {
+  .dishes-grid {
+    gap: 4px;
+    padding: 2px;
+  }
+  
+  .dish-card {
+    border-radius: 4px;
+  }
+  
+  .dish-image {
+    height: 120px;
+  }
+  
+  .dish-card-content {
+    padding: 6px;
+  }
+  
+  .dish-name {
+    font-size: 14px;
+  }
+  
+  .dish-description {
+    font-size: 11px;
+    margin: 2px 0;
+  }
+  
+  .dish-tags {
+    margin: 4px 0;
+    gap: 2px;
+  }
+  
+  .price-value {
+    font-size: 16px;
+  }
+  
+  .add-button {
+    height: 24px;
+    width: 24px;
+  }
+  
+  .add-button :deep(.el-icon) {
+    font-size: 14px;
+  }
+}
+
+/* 添加加载动画 */
+.dish-card {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 优化滚动体验 */
+.dishes-list {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  padding-bottom: 80px;
+}
+
+/* 添加加载占位图样式 */
+.image-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #f5f7fa 25%, #e4e7ed 50%, #f5f7fa 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }
 </style> 

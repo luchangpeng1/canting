@@ -14,55 +14,84 @@
     </el-row>
 
     <!-- 筛选工具栏 -->
-    <div class="toolbar">
-      <div class="filters">
-        <el-select 
-          v-model="canteenFilter" 
-          placeholder="选择餐厅" 
-          clearable
-          @change="windowFilter = ''">
-          <el-option
-            v-for="canteen in canteens"
-            :key="canteen.id"
-            :label="canteen.name"
-            :value="canteen.id">
-          </el-option>
-        </el-select>
-        
-        <el-select 
-          v-model="windowFilter" 
-          placeholder="选择窗口" 
-          clearable
-          :disabled="!canteenFilter">
-          <el-option
-            v-for="window in windows"
-            :key="window.id"
-            :label="window.name"
-            :value="window.id">
-          </el-option>
-        </el-select>
+    <div class="toolbar-container">
+      <div class="toolbar">
+        <div class="filter-group">
+          <div class="location-filters">
+            <el-select 
+              v-model="canteenFilter" 
+              placeholder="选择餐厅" 
+              clearable
+              class="filter-item"
+              @change="windowFilter = ''">
+              <template #prefix>
+                <el-icon><Location /></el-icon>
+              </template>
+              <el-option
+                v-for="canteen in canteens"
+                :key="canteen.id"
+                :label="canteen.name"
+                :value="canteen.id">
+              </el-option>
+            </el-select>
+            
+            <el-select 
+              v-model="windowFilter" 
+              placeholder="选择窗口" 
+              clearable
+              class="filter-item"
+              :disabled="!canteenFilter">
+              <template #prefix>
+                <el-icon><Shop /></el-icon>
+              </template>
+              <el-option
+                v-for="window in windows"
+                :key="window.id"
+                :label="window.name"
+                :value="window.id">
+              </el-option>
+            </el-select>
+          </div>
 
-        <el-select v-model="statusFilter" placeholder="订单状态" clearable>
-          <el-option
-            v-for="status in orderStatuses"
-            :key="status.value"
-            :label="status.label"
-            :value="status.value">
-          </el-option>
-        </el-select>
-        <el-date-picker
-          v-model="dateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          :shortcuts="dateShortcuts"
-        />
-      </div>
-      <div class="actions">
-        <el-button type="primary" @click="exportOrders">
-          <el-icon><Download /></el-icon>导出订单
-        </el-button>
+          <div class="status-filters">
+            <el-select 
+              v-model="statusFilter" 
+              placeholder="订单状态" 
+              class="filter-item"
+              clearable>
+              <template #prefix>
+                <el-icon><Files /></el-icon>
+              </template>
+              <el-option
+                v-for="status in orderStatuses"
+                :key="status.value"
+                :label="status.label"
+                :value="status.value">
+              </el-option>
+            </el-select>
+            <el-date-picker
+              v-model="dateRange"
+              type="daterange"
+              range-separator="至"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              class="filter-item date-picker"
+              :shortcuts="dateShortcuts"
+            />
+          </div>
+        </div>
+
+        <div class="action-group">
+          <el-button type="primary" @click="fetchOrders">
+            <el-icon><Search /></el-icon>查询
+          </el-button>
+          <el-button @click="resetFilters">
+            <el-icon><Refresh /></el-icon>重置
+          </el-button>
+          <el-button type="success" @click="exportOrders">
+            <el-icon><Download /></el-icon>导出订单
+          </el-button>
+        </div>
       </div>
     </div>
 
@@ -121,29 +150,12 @@
       </el-table-column>
       <el-table-column label="操作" width="150" fixed="right" align="center">
         <template #default="{ row }">
-          <el-button-group>
-            <el-button 
-              link 
-              type="primary" 
-              @click="showOrderDetail(row)"
-              :disabled="row.status === 'completed'">
-              查看
-            </el-button>
-            <el-button 
-              link 
-              type="success" 
-              v-if="row.status === 'pending'"
-              @click="handleOrder(row, 'accept')">
-              接单
-            </el-button>
-            <el-button 
-              link 
-              type="danger" 
-              v-if="row.status === 'pending'"
-              @click="handleOrder(row, 'reject')">
-              拒绝
-            </el-button>
-          </el-button-group>
+          <el-button 
+            link 
+            type="primary" 
+            @click="showOrderDetail(row)">
+            查看
+          </el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -211,12 +223,6 @@
       </div>
       <template #footer>
         <el-button @click="detailDialogVisible = false">关闭</el-button>
-        <el-button 
-          type="primary" 
-          v-if="currentOrder?.status === 'pending'"
-          @click="handleOrder(currentOrder, 'accept')">
-          接单
-        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -230,9 +236,15 @@ import {
   ShoppingCart,
   Check,
   Close,
-  Timer
+  Timer,
+  Location,
+  Shop,
+  Files,
+  Search,
+  Refresh
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
+import { checkPermission, isSuperAdmin } from '@/utils/permission'
 
 // 模拟窗口数据
 const windowsData = {
@@ -360,7 +372,12 @@ export default {
     ShoppingCart,
     Check,
     Close,
-    Timer
+    Timer,
+    Location,
+    Shop,
+    Files,
+    Search,
+    Refresh
   },
   setup() {
     // 状态和数据
@@ -398,8 +415,7 @@ export default {
       { value: 'pending', label: '待处理' },
       { value: 'accepted', label: '已接单' },
       { value: 'completed', label: '已完成' },
-      { value: 'cancelled', label: '已取消' },
-      { value: 'rejected', label: '已拒绝' }
+      { value: 'cancelled', label: '已取消' }
     ]
 
     // 日期快捷选项
@@ -430,26 +446,40 @@ export default {
       return windowsData[canteenFilter.value] || []
     })
 
-    // 修改筛选逻辑
+    // 添加 isDateInRange 函数
+    const isDateInRange = (dateStr, range) => {
+      if (!range || range.length !== 2) return true
+      const [start, end] = range
+      const date = dayjs(dateStr)
+      return date.isAfter(dayjs(start).startOf('day')) && 
+             date.isBefore(dayjs(end).endOf('day'))
+    }
+
+    // 修改 filteredOrders computed 属性
     const filteredOrders = computed(() => {
       return orders.value.filter(order => {
-        let match = true
-        if (canteenFilter.value) {
-          match = match && order.canteen_id === canteenFilter.value
-        }
-        if (windowFilter.value) {
-          match = match && order.window_id === windowFilter.value
-        }
-        if (statusFilter.value) {
-          match = match && order.status === statusFilter.value
-        }
-        if (dateRange.value && dateRange.value.length === 2) {
-          const orderDate = new Date(order.created_at)
-          match = match && orderDate >= dateRange.value[0] && 
-                          orderDate <= dateRange.value[1]
-        }
-        return match
+        const statusMatch = !statusFilter.value || order.status === statusFilter.value
+        const dateMatch = !dateRange.value || isDateInRange(order.created_at, dateRange.value)
+        const canteenMatch = !canteenFilter.value || order.canteen_id === canteenFilter.value
+        const windowMatch = !windowFilter.value || order.window_id === windowFilter.value
+        
+        return statusMatch && dateMatch && canteenMatch && windowMatch
       })
+    })
+
+    // 修改统计汇总功能（移除权限检查）
+    const totalStatistics = computed(() => {
+      return {
+        totalRevenue: orders.value.reduce((sum, order) => sum + order.total_amount, 0),
+        totalOrders: orders.value.length,
+        canteenStats: canteens.map(canteen => ({
+          name: canteen.name,
+          revenue: orders.value
+            .filter(order => order.canteen_id === canteen.id)
+            .reduce((sum, order) => sum + order.total_amount, 0),
+          orderCount: orders.value.filter(order => order.canteen_id === canteen.id).length
+        }))
+      }
     })
 
     // 监听餐厅筛选变化
@@ -484,35 +514,6 @@ export default {
     // 格式化日期时间
     const formatDateTime = (datetime) => {
       return dayjs(datetime).format('YYYY-MM-DD HH:mm:ss')
-    }
-
-    // 处理订单
-    const handleOrder = async (order, action) => {
-      try {
-        const confirmText = action === 'accept' ? '接单' : '拒绝'
-        await ElMessageBox.confirm(
-          `确定要${confirmText}这个订单吗？`,
-          '提示',
-          {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: action === 'accept' ? 'success' : 'warning'
-          }
-        )
-
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 300))
-        
-        // 直接修改订单状态
-        order.status = action === 'accept' ? 'accepted' : 'rejected'
-        
-        ElMessage.success(`订单已${confirmText}`)
-        detailDialogVisible.value = false
-      } catch (error) {
-        if (error !== 'cancel') {
-          ElMessage.error(`${action === 'accept' ? '接单' : '拒绝'}失败`)
-        }
-      }
     }
 
     // 导出订单
@@ -581,6 +582,15 @@ export default {
       }
     }
 
+    // 添加重置筛选方法
+    const resetFilters = () => {
+      canteenFilter.value = ''
+      windowFilter.value = ''
+      statusFilter.value = ''
+      dateRange.value = []
+      fetchOrders()
+    }
+
     onMounted(() => {
       fetchOrders()
     })
@@ -604,13 +614,14 @@ export default {
       getStatusType,
       getStatusText,
       formatDateTime,
-      handleOrder,
       exportOrders,
       showOrderDetail,
       handleSizeChange,
       handleCurrentChange,
       windowFilter,
       windows,
+      resetFilters,
+      fetchOrders,
     }
   }
 }
@@ -686,20 +697,75 @@ export default {
   color: rgba(255, 255, 255, 0.8);
 }
 
+.toolbar-container {
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+  padding: 16px;
+}
+
 .toolbar {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.filters {
-  display: flex;
-  gap: 15px;
+  align-items: center;
   flex-wrap: wrap;
+  gap: 16px;
 }
 
-.filters .el-select {
+.filter-group {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.location-filters,
+.status-filters {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.filter-item {
   min-width: 160px;
+}
+
+.date-picker {
+  min-width: 320px;
+}
+
+.action-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 响应式布局 */
+@media screen and (max-width: 1200px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-group {
+    flex-direction: column;
+  }
+  
+  .location-filters,
+  .status-filters {
+    flex-wrap: wrap;
+  }
+  
+  .filter-item,
+  .date-picker {
+    width: 100%;
+    min-width: unset;
+  }
+  
+  .action-group {
+    justify-content: flex-end;
+  }
 }
 
 .order-dishes {

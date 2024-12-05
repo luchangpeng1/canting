@@ -208,7 +208,7 @@ export default {
 
 .el-main {
   padding: 10px 8px;
-  padding-bottom: calc(10px + 55px + var(--safe-area-inset-bottom, 0px));
+  padding-bottom: calc(55px + var(--safe-area-inset-bottom, 0px));
   overflow-y: auto;
   flex: 1;
   -webkit-overflow-scrolling: touch;
@@ -218,12 +218,15 @@ export default {
 .footer {
   padding: 0;
   border-top: 1px solid #f5f5f5;
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: 0;
+  right: 0;
   background-color: #fff;
   box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.05);
   padding-bottom: var(--safe-area-inset-bottom, 0px);
   width: 100%;
+  z-index: 100;
 }
 
 .nav-buttons {

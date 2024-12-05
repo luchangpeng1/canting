@@ -322,20 +322,22 @@ export default {
       // 加载地面纹理
       const groundTexture = textureLoader.load('http://192.168.192.101:9000/canteen/3D%E5%B9%B3%E9%9D%A2%E5%9C%B0%E6%9D%BF.jpg')  // 替换为您的图片路径
       
-      // 设置纹理重复
+      // 优化纹理设置
       groundTexture.wrapS = THREE.RepeatWrapping
       groundTexture.wrapT = THREE.RepeatWrapping
       groundTexture.repeat.set(1, 1)  // 调整重复次数
       
-      // 设置纹理过滤
+      // 改进纹理过滤
       groundTexture.magFilter = THREE.LinearFilter
       groundTexture.minFilter = THREE.LinearMipmapLinearFilter
+      groundTexture.anisotropy = renderer.capabilities.getMaxAnisotropy() // 提高斜视角清晰度
       
       // 创建地面材质
       const groundMaterial = new THREE.MeshStandardMaterial({ 
         map: groundTexture,
-        roughness: 0.8,  // 调整粗糙度
-        metalness: 0.2,  // 调整金属感
+        roughness: 0.7,    // 调整粗糙度
+        metalness: 0.1,    // 降低金属感
+        color: 0xcccccc    // 添加一个浅灰色基调
       })
       
       // 创建地面几何体
@@ -391,33 +393,49 @@ export default {
     // 修改创建标记和标签的函数
     const createMarkerWithLabel = (canteen) => {
       // 创建标记圆柱体
-      const markerGeometry = new THREE.CylinderGeometry(0.7, 0.7, 3, 32)
-      const markerMaterial = new THREE.MeshStandardMaterial({ 
+      const markerGeometry = new THREE.CylinderGeometry(0.7, 0.7, 4, 32)
+      const markerMaterial = new THREE.MeshPhongMaterial({ 
         color: canteen.color,
-        metalness: 0.3,
-        roughness: 0.4
+        shininess: 100,
+        emissive: canteen.color,
+        emissiveIntensity: 0.2
       })
       const marker = new THREE.Mesh(markerGeometry, markerMaterial)
+      
+      // 添加光晕效果
+      const glowGeometry = new THREE.SphereGeometry(1.2, 32, 32)
+      const glowMaterial = new THREE.MeshBasicMaterial({
+        color: canteen.color,
+        transparent: true,
+        opacity: 0.3
+      })
+      const glow = new THREE.Mesh(glowGeometry, glowMaterial)
+      marker.add(glow)
 
-      // 设置位置
+      // 设置标记位置
       marker.position.set(
         canteen.position.x,
         2,
         canteen.position.z
       )
 
-      // 创建文字精灵
+      // 添加悬停动画
+      marker.onBeforeRender = () => {
+        glow.scale.setScalar(1 + Math.sin(Date.now() * 0.003) * 0.1)
+      }
+
+      // 创建并设置文字精灵
       const textSprite = createTextSprite(canteen.name)
       textSprite.position.set(
         canteen.position.x,
-        8, // 调整高度
-        canteen.position.z
+        6,  // 降低文字高度，从8改为6
+        canteen.position.z + 2  // 向前偏移，使文字更容易看到
       )
-
+      
       // 为标记和文字都添加用户数据
       marker.userData = canteen
       textSprite.userData = canteen
-      
+
       return { marker, textMesh: textSprite }
     }
 
@@ -493,14 +511,17 @@ export default {
     }
 
     const smoothCameraMove = (targetPos, lookAtPos = null) => {
-      const speed = 0.05
+      const speed = 0.08 // 增加移动速度
       const offset = new THREE.Vector3().subVectors(targetPos, camera.position).multiplyScalar(speed)
       
       camera.position.add(offset)
       
-      if (lookAtPos && isLocked.value) {
-        // 只更新控制器目标点，不强制相机朝向
-        controls.target.set(lookAtPos.x, 0, lookAtPos.z)
+      if (lookAtPos) {
+        // 平滑过渡相机朝向
+        const currentLookAt = controls.target
+        const newLookAt = new THREE.Vector3(lookAtPos.x, 0, lookAtPos.z)
+        currentLookAt.lerp(newLookAt, speed)
+        controls.target.copy(currentLookAt)
       }
       
       controls.update()
@@ -561,34 +582,42 @@ export default {
       controls.update()
     }
 
-    // 添加触摸事件处理函数
-    const handleTouchStart = (event) => {
-      isTouching = true
-      touchStartX = event.touches[0].clientX
-      touchStartY = event.touches[0].clientY
-    }
-
+    // 修改触摸控制相关函数
     const handleTouchMove = (event) => {
-      if (!isTouching) return
+      if (!isTouching || event.touches.length !== 1) return
 
-      const moveStep = 0.5 // 调整移动灵敏度
+      const moveStep = 0.3 // 降低灵敏度
       const currentX = event.touches[0].clientX
       const currentY = event.touches[0].clientY
       
-      // 计算移动距离
       const deltaX = (currentX - touchStartX) * moveStep
       const deltaZ = (currentY - touchStartY) * moveStep
 
-      // 更新相机位置，不再强制看向中心
-      camera.position.x -= deltaX
-      camera.position.z += deltaZ
+      // 添加惯性
+      const momentum = 0.95
+      camera.position.x -= deltaX * momentum
+      camera.position.z += deltaZ * momentum
 
-      // 更新起始点
       touchStartX = currentX
       touchStartY = currentY
 
-      // 移除强制朝向中心的代码
       controls.update()
+    }
+
+    // 添加双指缩放支持
+    let initialPinchDistance = 0
+
+    const handleTouchStart = (event) => {
+      if (event.touches.length === 2) {
+        initialPinchDistance = Math.hypot(
+          event.touches[0].clientX - event.touches[1].clientX,
+          event.touches[0].clientY - event.touches[1].clientY
+        )
+      } else {
+        isTouching = true
+        touchStartX = event.touches[0].clientX
+        touchStartY = event.touches[0].clientY
+      }
     }
 
     const handleTouchEnd = () => {

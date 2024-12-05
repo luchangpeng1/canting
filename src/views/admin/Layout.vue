@@ -60,10 +60,12 @@
           :background-color="settingsForm.navColor"
           text-color="#fff"
           active-text-color="#ffd04b">
+          <!-- 基础菜单项 -->
           <el-menu-item index="/admin/dishes">
             <el-icon><Dish /></el-icon>
             <span>菜品管理</span>
           </el-menu-item>
+          
           <el-menu-item index="/admin/menus">
             <el-icon><Calendar /></el-icon>
             <span>菜单管理</span>
@@ -79,10 +81,6 @@
           <el-menu-item index="/admin/dashboard">
             <el-icon><DataBoard /></el-icon>
             <span>数据看板</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/statistics">
-            <el-icon><TrendCharts /></el-icon>
-            <span>营业统计</span>
           </el-menu-item>
           <el-menu-item index="/admin/inventory">
             <el-icon><Box /></el-icon>
@@ -143,17 +141,6 @@
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
-            <el-badge 
-              :value="unreadCount" 
-              :hidden="unreadCount === 0" 
-              class="notification-badge">
-              <el-button 
-                circle 
-                @click="showNotifications"
-                :class="{ 'shake': notificationIconShaking }">
-                <el-icon><Bell /></el-icon>
-              </el-button>
-            </el-badge>
           </div>
         </el-header>
 
@@ -196,82 +183,6 @@
       </el-container>
     </el-container>
 
-    <!-- ��知消息���屉 -->
-    <el-drawer
-      title="消息通知"
-      v-model="notificationsVisible"
-      direction="rtl"
-      size="400px">
-      <template #header>
-        <div class="notifications-header">
-          <span class="drawer-title">消息通知</span>
-          <el-select 
-            v-model="activeNotificationType"
-            size="small"
-            style="width: 120px">
-            <el-option
-              v-for="type in notificationTypes"
-              :key="type.value"
-              :label="type.label"
-              :value="type.value">
-            </el-option>
-          </el-select>
-        </div>
-      </template>
-      
-      <div class="notifications-container">
-        <div v-if="filteredNotifications.length === 0" class="no-notifications">
-          暂无消息
-        </div>
-        <div v-else class="notifications-list">
-          <div 
-            v-for="notification in filteredNotifications" 
-            :key="notification.id"
-            class="notification-item"
-            :class="{ 
-              'unread': !notification.read,
-              [`priority-${notification.priority}`]: true
-            }"
-            @click="handleNotificationClick(notification)">
-            <div class="notification-icon">
-              <el-icon :color="NOTIFICATION_TYPES[notification.type.toUpperCase()].color">
-                <component :is="NOTIFICATION_TYPES[notification.type.toUpperCase()].icon" />
-              </el-icon>
-            </div>
-            <div class="notification-content">
-              <div class="notification-header">
-                <span class="notification-title">{{ notification.title }}</span>
-                <el-tag 
-                  :type="NOTIFICATION_TYPES[notification.type.toUpperCase()].tagType" 
-                  size="small">
-                  {{ NOTIFICATION_TYPES[notification.type.toUpperCase()].label }}
-                </el-tag>
-              </div>
-              <div class="notification-text">{{ notification.content }}</div>
-              <div class="notification-footer">
-                <span class="notification-time">{{ notification.time }}</span>
-                <el-button 
-                  v-if="!notification.read"
-                  type="primary" 
-                  link 
-                  size="small"
-                  @click.stop="markAsRead(notification.id)">
-                  标记已读
-                </el-button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <template #footer>
-        <div class="notifications-actions">
-          <el-button type="primary" link @click="markAllAsRead">全部标为已读</el-button>
-          <el-button type="danger" link @click="clearNotifications">清空消息</el-button>
-        </div>
-      </template>
-    </el-drawer>
-
     <!-- 个人信息对话框 -->
     <el-dialog
       title="个人信息"
@@ -302,7 +213,7 @@
           <div class="avatar-tips">点击图片更换头像</div>
         </div>
 
-        <!-- 基本信��部分 -->
+        <!-- 基本信息部分 -->
         <div class="profile-section">
           <h4>基本信息</h4>
           <el-form :model="profileForm" label-width="100px">
@@ -335,7 +246,7 @@
 
         <!-- 联系方式 -->
         <div class="profile-section">
-          <h4>联系方式</h4>
+          <h4>联系方��</h4>
           <el-form :model="profileForm" label-width="100px">
             <el-row :gutter="20">
               <el-col :span="12">
@@ -401,7 +312,7 @@
           </el-input>
           <!-- 密码强度指示器 -->
           <div class="password-strength" v-if="passwordForm.newPassword">
-            <div class="strength-label">�����������������������������������������������������������������������������������������������������������������������度���</div>
+            <div class="strength-label">密码强度</div>
             <div class="strength-bars">
               <div 
                 v-for="n in 3" 
@@ -424,7 +335,7 @@
         <div class="password-tips">
           <h4>密码要求：</h4>
           <ul>
-            <li :class="{ valid: hasLength }">长度至少6��</li>
+            <li :class="{ valid: hasLength }">长度至少6位</li>
             <li :class="{ valid: hasNumber }">包含数字</li>
             <li :class="{ valid: hasLetter }">包含字母</li>
             <li :class="{ valid: hasSpecial }">包含特殊字符</li>
@@ -575,103 +486,6 @@
           </div>
         </el-tab-pane>
 
-        <!-- 通知设置 -->
-        <el-tab-pane label="通知设置" name="notification">
-          <div class="settings-section">
-            <el-form :model="settingsForm" label-width="120px">
-              <h4>消��提醒</h4>
-              <el-form-item label="新订单通知">
-                <el-switch v-model="settingsForm.orderNotification" />
-              </el-form-item>
-              <el-form-item label="库存预警">
-                <el-switch v-model="settingsForm.stockAlert" />
-              </el-form-item>
-              <el-form-item label="系统通知">
-                <el-switch v-model="settingsForm.systemNotification" />
-              </el-form-item>
-              <el-divider />
-              
-              <h4>提醒方式</h4>
-              <el-form-item label="声音提醒">
-                <el-switch v-model="settingsForm.soundEnabled" />
-              </el-form-item>
-              <el-form-item label="桌面通知">
-                <el-switch v-model="settingsForm.desktopNotification" />
-              </el-form-item>
-              <el-form-item label="通知音量">
-                <el-slider
-                  v-model="settingsForm.notificationVolume"
-                  :disabled="!settingsForm.soundEnabled"
-                  show-input>
-                </el-slider>
-              </el-form-item>
-              <el-divider />
-              
-              <h4>预警设置</h4>
-              <el-form-item label="库存预警阈值">
-                <el-input-number
-                  v-model="settingsForm.stockThreshold"
-                  :min="1"
-                  :max="100"
-                  controls-position="right" />
-              </el-form-item>
-              <el-form-item label="订单超时时间">
-                <el-input-number
-                  v-model="settingsForm.orderTimeout"
-                  :min="1"
-                  :max="60"
-                  controls-position="right">
-                  <template #append>分钟</template>
-                </el-input-number>
-              </el-form-item>
-              <el-divider />
-              
-              <h4>提示音设置</h4>
-              <div class="sound-settings">
-                <el-radio-group v-model="settingsForm.notificationSound" class="sound-options">
-                  <el-radio-button 
-                    v-for="sound in notificationSounds" 
-                    :key="sound.value" 
-                    :label="sound.value">
-                    {{ sound.label }}
-                    <el-button 
-                      link
-                      type="primary" 
-                      class="play-sound-btn"
-                      @click.stop="playPreviewSound(sound.value)">
-                      <el-icon><VideoPlay /></el-icon>
-                    </el-button>
-                    <el-button
-                      v-if="sound.value !== 'default'"
-                      link
-                      type="danger"
-                      class="delete-sound-btn"
-                      @click.stop="deleteSound(sound.value)">
-                      <el-icon><Delete /></el-icon>
-                    </el-button>
-                  </el-radio-button>
-                </el-radio-group>
-
-                <div class="upload-sound">
-                  <input
-                    type="file"
-                    ref="soundInput"
-                    accept="audio/*"
-                    style="display: none"
-                    @change="handleSoundUpload"
-                  />
-                  <el-button 
-                    type="primary" 
-                    @click="$refs.soundInput.click()">
-                    <el-icon><Plus /></el-icon>
-                    添加音效
-                  </el-button>
-                </div>
-              </div>
-            </el-form>
-          </div>
-        </el-tab-pane>
-
         <!-- 数据管理 -->
         <el-tab-pane label="数据管理" name="data">
           <div class="settings-section">
@@ -730,7 +544,7 @@
         <el-tab-pane label="隐私安全" name="security">
           <div class="settings-section">
             <el-form :model="settingsForm" label-width="120px">
-              <h4>登录安��</h4>
+              <h4>登录安全</h4>
               <el-form-item label="登录验证">
                 <el-switch v-model="settingsForm.loginVerification" />
               </el-form-item>
@@ -748,7 +562,7 @@
               
               <el-divider />
               
-              <h4>操作��全</h4>
+              <h4>操作安全</h4>
               <el-form-item label="操作确认">
                 <el-switch v-model="settingsForm.operationConfirm" />
               </el-form-item>
@@ -774,7 +588,7 @@
       </template>
     </el-dialog>
 
-    <!-- 系统日志对话��� -->
+    <!-- 系统日志对话框 -->
     <el-dialog
       title="系统日志"
       v-model="logDialogVisible"
@@ -789,7 +603,7 @@
         <el-date-picker
           v-model="logDateRange"
           type="daterange"
-          range-separator="���"
+          range-separator="至"
           start-placeholder="开始日期"
           end-placeholder="结束日期">
         </el-date-picker>
@@ -797,7 +611,7 @@
       <el-table :data="systemLogs" height="400">
         <el-table-column prop="timestamp" label="时间" width="180" />
         <el-table-column prop="type" label="类型" width="100" />
-        <el-table-column prop="user" label="操��人" width="120" />
+        <el-table-column prop="user" label="操作人" width="120" />
         <el-table-column prop="content" label="内容" />
       </el-table>
     </el-dialog>
@@ -826,7 +640,7 @@
       </el-tabs>
     </el-dialog>
 
-    <!-- 头像预览对话��� -->
+    <!-- 头像预览对话框 -->
     <el-dialog
       v-model="avatarPreviewVisible"
       title="头像预览"
@@ -839,6 +653,331 @@
         <el-button @click="avatarPreviewVisible = false">关闭</el-button>
         <el-button type="primary" @click="triggerFileInput">重新上传</el-button>
       </div>
+    </el-dialog>
+
+    <!-- 使用帮助对话框 -->
+    <el-dialog
+      title="使用帮助"
+      v-model="helpDialogVisible"
+      width="800px"
+      class="help-dialog">
+      <div class="help-container">
+        <!-- 左侧导航 -->
+        <div class="help-nav">
+          <el-menu
+            :default-active="activeHelpSection"
+            @select="handleHelpSelect">
+            <el-menu-item index="overview">
+              <el-icon><Document /></el-icon>
+              系统概览
+            </el-menu-item>
+            <el-menu-item index="dishes">
+              <el-icon><Dish /></el-icon>
+              菜品管理
+            </el-menu-item>
+            <el-menu-item index="menus">
+              <el-icon><Calendar /></el-icon>
+              菜单管理
+            </el-menu-item>
+            <el-menu-item index="orders">
+              <el-icon><List /></el-icon>
+              订单管理
+            </el-menu-item>
+            <el-menu-item index="inventory">
+              <el-icon><Box /></el-icon>
+              库存管理
+            </el-menu-item>
+            <el-menu-item index="settings">
+              <el-icon><Setting /></el-icon>
+              系统设置
+            </el-menu-item>
+            <el-menu-item index="faq">
+              <el-icon><QuestionFilled /></el-icon>
+              常见问题
+            </el-menu-item>
+          </el-menu>
+        </div>
+
+        <!-- 右侧内容 -->
+        <div class="help-content">
+          <!-- 在右侧内容区域完善各个功能的帮助内容 -->
+          <div class="help-content">
+            <!-- 系统概览 -->
+            <div v-if="activeHelpSection === 'overview'" class="help-section">
+              <h3>系统概览</h3>
+              <el-divider />
+              <div class="help-text">
+                <h4>系统简介</h4>
+                <p>智慧食堂管理系统是一个现代化的餐饮管理平台，致力于提供高效、便捷的食堂运营解决方案。</p>
+                
+                <h4>主要功能</h4>
+                <ul>
+                  <li>菜品管理：添加、编辑和管理菜品信息，包括价格、库存等</li>
+                  <li>菜单管理：制定和发布每日菜单，灵活调整菜品组合</li>
+                  <li>订单管理：实时处理和跟踪订单状态，提高服务效率</li>
+                  <li>库存管理：监控和管理食材库存，及时补充物料</li>
+                  <li>数据统计：查看销售和运营数据，辅助决策分析</li>
+                </ul>
+
+                <h4>快速入门</h4>
+                <ol>
+                  <li>登录系统：使用工号和密码登录</li>
+                  <li>身份验证：选择所属餐厅和窗口</li>
+                  <li>功能导航：使用左侧菜单访问各个功能模块</li>
+                  <li>个人设置：右上角可进行个人信息设置</li>
+                </ol>
+              </div>
+            </div>
+
+            <!-- 菜品管理 -->
+            <div v-if="activeHelpSection === 'dishes'" class="help-section">
+              <h3>菜品管理</h3>
+              <el-divider />
+              <div class="help-text">
+                <h4>添加菜品</h4>
+                <ol>
+                  <li>点击"添加菜品"按钮</li>
+                  <li>填写菜品基本信息：
+                    <ul>
+                      <li>名称：输入菜品名称</li>
+                      <li>价格：设置菜品价格</li>
+                      <li>分类：选择所属分类</li>
+                      <li>描述：添加菜品描述</li>
+                    </ul>
+                  </li>
+                  <li>上传菜品图片：支持JPG、PNG格式</li>
+                  <li>设置菜品状态：上架/下架</li>
+                  <li>设置库存信息</li>
+                </ol>
+
+                <h4>编辑菜品</h4>
+                <ol>
+                  <li>在菜品列表中找到需要编辑的菜品</li>
+                  <li>点击"编辑"按钮</li>
+                  <li>修改相关信息</li>
+                  <li>点击"保存"确认修改</li>
+                </ol>
+
+                <h4>菜品状态管理</h4>
+                <ul>
+                  <li>上架：菜品可供选购</li>
+                  <li>下架：暂停销售</li>
+                  <li>售罄：库存不足时自动显示</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- 菜单管理 -->
+            <div v-if="activeHelpSection === 'menus'" class="help-section">
+              <h3>菜单管理</h3>
+              <el-divider />
+              <div class="help-text">
+                <h4>创建菜单</h4>
+                <ol>
+                  <li>选择菜单日期</li>
+                  <li>添加菜品到菜单：
+                    <ul>
+                      <li>从菜品库中选择</li>
+                      <li>设置供应时段</li>
+                      <li>设置供应数量</li>
+                    </ul>
+                  </li>
+                  <li>调整菜品顺序</li>
+                  <li>发布菜单</li>
+                </ol>
+
+                <h4>菜单模板</h4>
+                <p>可以将常用菜单保存为模板，方便快速创建：</p>
+                <ul>
+                  <li>保存当前菜单为模板</li>
+                  <li>使用模板创建菜单</li>
+                  <li>管理模板列表</li>
+                </ul>
+
+                <h4>注意事项</h4>
+                <ul>
+                  <li>菜单需提前一天发布</li>
+                  <li>已发布菜单修改后需重新发布</li>
+                  <li>注意检查菜品库存</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- 订单管理 -->
+            <div v-if="activeHelpSection === 'orders'" class="help-section">
+              <h3>订单管理</h3>
+              <el-divider />
+              <div class="help-text">
+                <h4>订单处理流程</h4>
+                <ol>
+                  <li>接收新订单</li>
+                  <li>确认订单：
+                    <ul>
+                      <li>检查订单内容</li>
+                      <li>确认库存状态</li>
+                      <li>查看备注信息</li>
+                    </ul>
+                  </li>
+                  <li>开始制作</li>
+                  <li>完成订单</li>
+                </ol>
+
+                <h4>订单状态说明</h4>
+                <ul>
+                  <li>待确认：新收到的订单</li>
+                  <li>制作中：已确认正在制作</li>
+                  <li>待取餐：制作完成等待取餐</li>
+                  <li>已完成：订单已结束</li>
+                  <li>已取消：订单被取消</li>
+                </ul>
+
+                <h4>特殊情况处理</h4>
+                <ul>
+                  <li>缺货处理：及时联系顾客变更订单</li>
+                  <li>退款处理：按流程申请退款</li>
+                  <li>投诉处理：认真记录并及时处理</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- 库存管理 -->
+            <div v-if="activeHelpSection === 'inventory'" class="help-section">
+              <h3>库存管理</h3>
+              <el-divider />
+              <div class="help-text">
+                <h4>库存操作</h4>
+                <ul>
+                  <li>入库管理：
+                    <ol>
+                      <li>登记新入库食材</li>
+                      <li>记录入库数量和单价</li>
+                      <li>设置保质期信息</li>
+                    </ol>
+                  </li>
+                  <li>出库管理：
+                    <ol>
+                      <li>记录日常消耗</li>
+                      <li>处理损耗登记</li>
+                      <li>盘点库存差异</li>
+                    </ol>
+                  </li>
+                </ul>
+
+                <h4>库存预警</h4>
+                <ul>
+                  <li>设置预警阈值</li>
+                  <li>库存不足提醒</li>
+                  <li>保质期预警</li>
+                </ul>
+
+                <h4>库存报表</h4>
+                <ul>
+                  <li>库存盘点表</li>
+                  <li>进销存报表</li>
+                  <li>库存分析报告</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- 系统设置 -->
+            <div v-if="activeHelpSection === 'settings'" class="help-section">
+              <h3>系统设置</h3>
+              <el-divider />
+              <div class="help-text">
+                <h4>基本设置</h4>
+                <ul>
+                  <li>主题设置：
+                    <ul>
+                      <li>选择主题颜色</li>
+                      <li>调整界面布局</li>
+                      <li>深色模式切换</li>
+                    </ul>
+                  </li>
+                  <li>通知设置：
+                    <ul>
+                      <li>订单通知</li>
+                      <li>库存预警</li>
+                      <li>系统消息</li>
+                    </ul>
+                  </li>
+                </ul>
+
+                <h4>安全设置</h4>
+                <ul>
+                  <li>修改密码</li>
+                  <li>登录验证</li>
+                  <li>操作确认</li>
+                </ul>
+
+                <h4>数据管理</h4>
+                <ul>
+                  <li>数据备份</li>
+                  <li>清理缓存</li>
+                  <li>导出报表</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- 常见问题 -->
+            <div v-if="activeHelpSection === 'faq'" class="help-section">
+              <h3>常见问题</h3>
+              <el-divider />
+              <div class="help-text">
+                <el-collapse accordion>
+                  <el-collapse-item title="1. 如何修改密码？" name="1">
+                    <p>1. 点击右上角头像</p>
+                    <p>2. 选择"修改密码"选项</p>
+                    <p>3. 输入原密码和新密码</p>
+                    <p>4. 确认新密码并保存</p>
+                    <p>注意：密码长度不少于6位，需包含字母和数字</p>
+                  </el-collapse-item>
+
+                  <el-collapse-item title="2. 如何处理订单？" name="2">
+                    <p>1. 进入订单管理页面</p>
+                    <p>2. 查看待处理订单列表</p>
+                    <p>3. 点击订单进入详情页</p>
+                    <p>4. 按照订单状态进行相应操作</p>
+                    <p>5. 完成订单处理</p>
+                  </el-collapse-item>
+
+                  <el-collapse-item title="3. 如何管理库存？" name="3">
+                    <p>1. 进入库存管理模块</p>
+                    <p>2. 查看当前库存状态</p>
+                    <p>3. 进行入库/出库操作</p>
+                    <p>4. 设置库存预警值</p>
+                    <p>5. 定期盘点库存</p>
+                  </el-collapse-item>
+
+                  <el-collapse-item title="4. 系统无法登录怎么办？" name="4">
+                    <p>1. 检查网络连接</p>
+                    <p>2. 确认账号密码是否正确</p>
+                    <p>3. 清除浏览器缓存</p>
+                    <p>4. 联系系统管理员</p>
+                  </el-collapse-item>
+
+                  <el-collapse-item title="5. 如何导出数据报表？" name="5">
+                    <p>1. 进入相应的功能模块</p>
+                    <p>2. 选择要导出的数据范围</p>
+                    <p>3. 点击"导出"按钮</p>
+                    <p>4. 选择导出格式（Excel/PDF）</p>
+                    <p>5. 确认导出</p>
+                  </el-collapse-item>
+                </el-collapse>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="help-footer">
+          <el-button @click="helpDialogVisible = false">关闭</el-button>
+          <el-button type="primary" @click="downloadUserManual">
+            <el-icon><Download /></el-icon>
+            下载完整手册
+          </el-button>
+        </div>
+      </template>
     </el-dialog>
   </div>
 </template>
@@ -853,7 +992,6 @@ import {
   Shop, 
   UserFilled, 
   CaretBottom,
-  Bell,
   Download,
   QuestionFilled,
   ChatDotRound,
@@ -871,9 +1009,11 @@ import {
   Setting,
   Lock,
   SwitchButton,
-  VideoPlay
+  VideoPlay,
+  Document
 } from '@element-plus/icons-vue'
 import { ref, computed, onMounted, onUnmounted, reactive, watch } from 'vue'
+import { checkPermission, isSuperAdmin as checkIsSuperAdmin } from '@/utils/permission'
 
 export default {
   name: 'AdminLayout',
@@ -884,7 +1024,6 @@ export default {
     Shop,
     UserFilled,
     CaretBottom,
-    Bell,
     Download,
     QuestionFilled,
     ChatDotRound,
@@ -902,7 +1041,8 @@ export default {
     Setting,
     Lock,
     SwitchButton,
-    VideoPlay
+    VideoPlay,
+    Document
   },
   setup() {
     const router = useRouter()
@@ -959,6 +1099,9 @@ export default {
         case 'logout':
           handleLogout()
           break
+        case 'help':
+          helpDialogVisible.value = true
+          break
       }
     }
 
@@ -1009,7 +1152,7 @@ export default {
       workHours: '09:00-17:00',
       restDays: '周六、周日',
       
-      // 紧急联系人
+      // 紧急联��人
       emergencyContact: '',
       emergencyPhone: '',
       emergencyRelation: '',
@@ -1024,7 +1167,7 @@ export default {
         satisfaction: '4.8',
         completeRate: '96%'
       },
-      avatar: '', // 添加头像字���
+      avatar: '', // 添加头像字��
     })
 
     // 头像上传相关方法
@@ -1073,7 +1216,6 @@ export default {
     onMounted(() => {
       checkMobile()
       window.addEventListener('resize', checkMobile)
-      checkVerification()
       fetchDashboardStats()  // 获取仪表盘数据
       fetchNotifications()
       fetchTodos()
@@ -1194,22 +1336,32 @@ export default {
       try {
         await verifyFormRef.value.validate()
         
-        // 保存验证信息到本地存储
         const selectedCanteen = canteens.value.find(c => c.id === verifyForm.value.canteen)
         const selectedWindow = availableWindows.value.find(w => w.id === verifyForm.value.window)
+        
+        // 获取用户信息
+        const userInfo = JSON.parse(localStorage.getItem('user') || '{}')
+        
+        // 检查验证信息是否与登录信息匹配
+        if (userInfo.verifiedInfo) {
+          if (userInfo.verifiedInfo.canteen.id !== selectedCanteen.id ||
+              userInfo.verifiedInfo.window.id !== selectedWindow.id) {
+            throw new Error('验证信息与登录信息不匹配')
+          }
+        }
         
         const verifiedInfo = {
           canteen: selectedCanteen,
           window: selectedWindow,
           verifiedAt: new Date().toISOString()
         }
-        localStorage.setItem('verifiedInfo', JSON.stringify(verifiedInfo))
         
+        localStorage.setItem('verifiedInfo', JSON.stringify(verifiedInfo))
         verifyDialogVisible.value = false
         ElMessage.success('身份验证成功')
       } catch (error) {
-        console.error('验证失���:', error)
-        ElMessage.error('请完成所有必填项')
+        console.error('验证失败:', error)
+        ElMessage.error(error.message || '请完成所有必填项')
       } finally {
         verifying.value = false
       }
@@ -1217,9 +1369,42 @@ export default {
 
     // 检查身份验证状态
     const checkVerification = () => {
-      const verifiedInfo = localStorage.getItem('verifiedInfo')
+      const userInfo = JSON.parse(localStorage.getItem('user') || '{}')
+      const verifiedInfo = userInfo.verifiedInfo
+
       if (!verifiedInfo) {
+        // 如果没有验证信息，显示验证对话框
         verifyDialogVisible.value = true
+        return
+      }
+
+      // 如果有验证信息，检查是否与登录信息匹配
+      const storedVerifiedInfo = localStorage.getItem('verifiedInfo')
+      if (storedVerifiedInfo) {
+        const currentVerifiedInfo = JSON.parse(storedVerifiedInfo)
+        
+        // 检查餐厅和窗口是否匹配
+        // 添加空值检查以避免访问 undefined 的属性
+        if (verifiedInfo.canteen?.id !== currentVerifiedInfo.canteen?.id ||
+            verifiedInfo.window?.id !== currentVerifiedInfo.window?.id) {
+          ElMessageBox.confirm(
+            '检测到您的窗口验证信息与登录信息不一致，是否重新验证？',
+            '验证提示',
+            {
+              confirmButtonText: '重新验证',
+              cancelButtonText: '取消',
+              type: 'warning'
+            }
+          ).then(() => {
+            verifyDialogVisible.value = true
+          }).catch(() => {
+            // 用户取消，使用登录时的验证信息
+            localStorage.setItem('verifiedInfo', JSON.stringify(verifiedInfo))
+          })
+        }
+      } else {
+        // 如果没有本地验证信息，使用登录时的验证信息
+        localStorage.setItem('verifiedInfo', JSON.stringify(verifiedInfo))
       }
     }
 
@@ -1228,7 +1413,7 @@ export default {
       verifyForm.value.window = '' // 重置窗口选择
     })
 
-    // 通知相关的类型定义
+    // 通知相关的类型定��
     const NOTIFICATION_TYPES = {
       ORDER: {
         type: 'order',
@@ -1336,7 +1521,7 @@ export default {
       }
     }
 
-    // �����检查新消���
+    // �����检查新消息
     let checkInterval
     const startNotificationCheck = () => {
       checkInterval = setInterval(async () => {
@@ -1347,7 +1532,7 @@ export default {
     // 检查新消息
     const checkNewNotifications = async () => {
       try {
-        // 模拟API调用
+        // 模��API调用
         const hasNew = Math.random() > 0.7 // 30%概率有新消息
         if (hasNew) {
           const newNotification = {
@@ -1812,7 +1997,7 @@ export default {
           description: '简洁明亮的纯白色调'
         },
         {
-          label: '象牙白',
+          label: '��牙白',
           value: '#f5f7fa',
           description: '柔和舒适的象牙白'
         },
@@ -2212,6 +2397,24 @@ export default {
       }
     }
 
+    // 修改为调用函数的计算属性
+    const isSuperAdmin = computed(() => checkIsSuperAdmin())
+
+    // 在 setup 中添加
+    const helpDialogVisible = ref(false)
+    const activeHelpSection = ref('overview')
+
+    // 处理帮助菜单选择
+    const handleHelpSelect = (index) => {
+      activeHelpSection.value = index
+    }
+
+    // 下载用户手册
+    const downloadUserManual = () => {
+      // 这里可以实现下载功能
+      ElMessage.success('用户手册下载中...')
+    }
+
     return {
       isMobile,
       isCollapse,
@@ -2230,7 +2433,6 @@ export default {
       verifying,
       notifications,
       unreadCount,
-      notificationsVisible,
       markAsRead,
       markAllAsRead,
       clearNotifications,
@@ -2299,6 +2501,11 @@ export default {
       deleteSound,
       loadPresetSounds,
       saveSettings,
+      isSuperAdmin,
+      helpDialogVisible,
+      activeHelpSection,
+      handleHelpSelect,
+      downloadUserManual
     }
   }
 }
@@ -2700,7 +2907,7 @@ export default {
   margin-left: 4px;
 }
 
-/* 数据统计面板样式 */
+/* 数据统计面板样�� */
 .stats-panel {
   margin-bottom: 20px;
 }
@@ -2747,652 +2954,6 @@ export default {
 
 .stat-item.warning {
   color: #E6A23C;
-}
-
-/* 待办事样式 */
-.todo-panel {
-  margin-bottom: 20px;
-}
-
-.todo-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #EBEEF5;
-}
-
-.todo-item:last-child {
-  border-bottom: none;
-}
-
-.completed {
-  text-decoration: line-through;
-  color: #909399;
-}
-
-.deadline {
-  color: #909399;
-  margin-right: 10px;
-}
-
-/* 系统日志样式 */
-.log-filters {
-  margin-bottom: 20px;
-}
-
-.log-pagination {
-  margin-top: 20px;
-  text-align: right;
-}
-
-/* 数据分析样式 */
-.analysis-filters {
-  margin-bottom: 20px;
-}
-
-.chart-container {
-  background: #fff;
-  padding: 20px;
-  border-radius: 4px;
-}
-
-/* 主题设置样式 */
-.theme-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.theme-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 10px;
-}
-
-.theme-actions .el-button {
-  padding: 8px 15px;
-}
-
-.theme-actions .el-icon {
-  margin-right: 4px;
-}
-
-.theme-area {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-/* 通知相关样式 */
-.notifications-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 20px;
-}
-
-.notifications-container {
-  height: calc(100% - 120px);
-  overflow-y: auto;
-}
-
-.notifications-list {
-  padding: 10px;
-}
-
-.notification-item {
-  display: flex;
-  padding: 15px;
-  border-bottom: 1px solid #EBEEF5;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.notification-item:hover {
-  background-color: #F5F7FA;
-}
-
-.notification-item.unread {
-  background-color: #ECF5FF;
-}
-
-.notification-icon {
-  margin-right: 12px;
-  display: flex;
-  align-items: flex-start;
-}
-
-.notification-content {
-  flex: 1;
-}
-
-.notification-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.notification-title {
-  font-weight: bold;
-  color: #303133;
-}
-
-.notification-text {
-  color: #606266;
-  margin-bottom: 8px;
-  line-height: 1.4;
-}
-
-.notification-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.notification-time {
-  color: #909399;
-  font-size: 12px;
-}
-
-.priority-high {
-  border-left: 4px solid #F56C6C;
-}
-
-.priority-medium {
-  border-left: 4px solid #E6A23C;
-}
-
-.priority-low {
-  border-left: 4px solid #67C23A;
-}
-
-.no-notifications {
-  text-align: center;
-  color: #909399;
-  padding: 40px 0;
-}
-
-.notifications-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 20px;
-  padding: 10px 20px;
-  border-top: 1px solid #EBEEF5;
-}
-
-/* 个人信息样式 */
-.profile-container {
-  padding: 20px;
-}
-
-.profile-section {
-  margin-bottom: 30px;
-}
-
-.profile-section h4 {
-  margin: 0 0 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #EBEEF5;
-  color: #303133;
-}
-
-.profile-avatar {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.profile-avatar .el-avatar {
-  width: 100px;
-  height: 100px;
-  margin-bottom: 10px;
-}
-
-.profile-info {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-}
-
-.profile-info-item {
-  display: flex;
-  align-items: center;
-}
-
-.profile-info-label {
-  width: 80px;
-  color: #606266;
-}
-
-.profile-info-value {
-  flex: 1;
-  color: #303133;
-}
-
-.profile-actions {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 20px;
-}
-
-.notification-badge {
-  margin-left: 20px;
-}
-
-.notification-badge .el-button {
-  transition: transform 0.3s ease;
-}
-
-.notification-badge .el-button.shake {
-  animation: shake 0.5s ease-in-out;
-}
-
-@keyframes shake {
-  0%, 100% { transform: rotate(0); }
-  20%, 60% { transform: rotate(8deg); }
-  40%, 80% { transform: rotate(-8deg); }
-}
-
-/* 优化通知图标的悬停效果 */
-.notification-badge .el-button:hover {
-  background-color: #f5f7fa;
-  transform: scale(1.05);
-}
-
-.notification-badge .el-button:active {
-  transform: scale(0.95);
-}
-
-/* 主题设置样式 */
-.theme-preview {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  height: 200px;
-  margin-bottom: 20px;
-  display: flex;
-  overflow: hidden;
-}
-
-.preview-aside {
-  width: 80px;
-  padding: 10px;
-  transition: all 0.3s;
-}
-
-.preview-logo {
-  height: 30px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  margin-bottom: 10px;
-}
-
-.preview-menu {
-  height: calc(100% - 40px);
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-.preview-main {
-  flex: 1;
-  padding: 10px;
-  transition: all 0.3s;
-}
-
-.preview-header {
-  height: 40px;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 4px;
-  margin-bottom: 10px;
-}
-
-.preview-content {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.preview-card {
-  height: 100px;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 4px;
-}
-
-.color-section {
-  margin-bottom: 20px;
-}
-
-.color-section h5 {
-  margin: 0 0 10px;
-  color: #606266;
-  font-size: 14px;
-}
-
-.color-options {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.color-option {
-  display: flex;
-  align-items: center;
-  padding: 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.3s;
-}
-
-.color-option:hover {
-  background: #f5f7fa;
-}
-
-.color-option.active {
-  border-color: var(--el-color-primary);
-}
-
-.color-option.recommended {
-  position: relative;
-}
-
-.color-option.recommended::after {
-  content: '推荐';
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  font-size: 12px;
-  color: var(--el-color-success);
-}
-
-.color-block {
-  width: 40px;
-  height: 40px;
-  border-radius: 4px;
-  margin-right: 10px;
-  border: 1px solid #dcdfe6;
-}
-
-.color-info {
-  flex: 1;
-}
-
-.color-name {
-  display: block;
-  font-size: 14px;
-  color: #303133;
-  margin-bottom: 4px;
-}
-
-.color-desc {
-  display: block;
-  font-size: 12px;
-  color: #909399;
-}
-
-/* 设置对话框样式 */
-.settings-section {
-  padding: 20px;
-}
-
-.settings-section h4 {
-  margin: 0 0 20px;
-  color: #303133;
-  font-size: 16px;
-}
-
-.backup-settings {
-  margin-bottom: 20px;
-}
-
-.backup-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.storage-info {
-  margin-top: 10px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.storage-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.storage-item .label {
-  color: #909399;
-  font-size: 14px;
-}
-
-.storage-item .value {
-  color: #303133;
-  font-weight: 500;
-}
-
-/* 表单��局优化 */
-.el-form-item {
-  margin-bottom: 22px;
-}
-
-.el-divider {
-  margin: 24px 0;
-}
-
-/* 选项卡样式优化 */
-.el-tabs__nav {
-  margin-bottom: 20px;
-}
-
-.el-tab-pane {
-  padding: 0 20px;
-}
-
-/* 数据分析对话框样式 */
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-}
-
-.dialog-actions {
-  display: flex;
-  gap: 15px;
-}
-
-.chart-container {
-  height: 400px;
-  padding: 20px;
-}
-
-/* 图表加载状态样式 */
-.chart-loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 400px;
-  background: rgba(255, 255, 255, 0.9);
-}
-
-/* 图表标题样式 */
-.chart-title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #303133;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-/* 图表图例样式 */
-.chart-legend {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 20px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.legend-color {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-}
-
-.legend-label {
-  font-size: 14px;
-  color: #606266;
-}
-
-/* 头像上传样式 */
-.avatar-uploader {
-  width: 100px;
-  height: 100px;
-  border: 1px dashed #dcdfe6;
-  border-radius: 6px;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-}
-
-.avatar-uploader:hover {
-  border-color: #409eff;
-}
-
-.avatar-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
-  width: 100%;
-  height: 100%;
-  line-height: 100px;
-  text-align: center;
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.avatar-tips {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #909399;
-}
-
-/* 头像上传样式 */
-.profile-avatar-section {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.avatar-uploader {
-  display: inline-block;
-}
-
-.avatar-uploader .el-upload {
-  border: 1px dashed var(--el-border-color);
-  border-radius: 50%;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: var(--el-transition-duration);
-}
-
-.avatar-uploader .el-upload:hover {
-  border-color: var(--el-color-primary);
-}
-
-.avatar-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
-  width: 120px;
-  height: 120px;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.avatar-image {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  display: block;
-  object-fit: cover;
-}
-
-.avatar-tips {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 8px;
-}
-
-/* 确保头像在用户信息下拉菜单中也更新 */
-.user-info .el-avatar {
-  border: 2px solid #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
-}
-
-/* 头像预览对话框样式 */
-.avatar-preview-container {
-  display: flex;           /* 使用 flex 布局 */
-  flex-direction: column;  /* 垂直排列 */
-  align-items: center;     /* 水平居中 */
-  justify-content: center; /* 垂直居中 */
-  min-height: 400px;       /* 设置最小高度确保垂直居中效果 */
-  padding: 20px;
-}
-
-.preview-image {
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  object-fit: cover;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
-
-.preview-actions {
-  display: flex;          /* 使用 flex 布局 */
-  justify-content: center;/* 按钮水平居中 */
-  gap: 20px;             /* 按钮之间的间距 */
-  margin-top: 30px;      /* 增加与图片的距离 */
-}
-
-/* 添加过渡动画 */
-.preview-image {
-  transition: transform 0.3s ease;
-}
-
-.preview-image:hover {
-  transform: scale(1.02); /* 鼠标悬停时轻微放大 */
-}
-
-/* 确保头像在各处显示一致 */
-.user-info .el-avatar {
-  border: 2px solid #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
-  transition: transform 0.3s;
-}
-
-.user-info .el-avatar:hover {
-  transform: scale(1.1);
-}
-
-/* 优化上传区域的交互 */
-.avatar-uploader {
-  cursor: pointer;
-  transition: all 0.3s;
 }
 
 .avatar-uploader:hover .avatar-image {
@@ -3599,5 +3160,90 @@ export default {
 .enable-animation .el-button,
 .enable-animation .el-card {
   transition: all 0.3s ease;
+}
+
+/* 帮助对话框样式 */
+.help-dialog :deep(.el-dialog__body) {
+  padding: 0;
+  height: 600px;
+}
+
+.help-container {
+  display: flex;
+  height: 100%;
+}
+
+.help-nav {
+  width: 200px;
+  border-right: 1px solid var(--el-border-color-light);
+  height: 100%;
+}
+
+.help-nav .el-menu {
+  border-right: none;
+}
+
+.help-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.help-section h3 {
+  margin: 0 0 20px;
+  color: var(--el-text-color-primary);
+}
+
+.help-text {
+  color: var(--el-text-color-regular);
+  line-height: 1.8;
+}
+
+.help-text h4 {
+  margin: 20px 0 10px;
+  color: var(--el-text-color-primary);
+}
+
+.help-text ul {
+  padding-left: 20px;
+  margin: 10px 0;
+}
+
+.help-text li {
+  margin-bottom: 8px;
+}
+
+.help-footer {
+  padding: 10px 20px;
+  text-align: right;
+  border-top: 1px solid var(--el-border-color-light);
+}
+
+/* FAQ 折叠面板样式 */
+.help-text :deep(.el-collapse) {
+  border: none;
+}
+
+.help-text :deep(.el-collapse-item__header) {
+  font-size: 16px;
+  color: var(--el-text-color-primary);
+}
+
+.help-text :deep(.el-collapse-item__content) {
+  padding: 10px 20px;
+  color: var(--el-text-color-regular);
+}
+
+/* 适配深色模式 */
+:root.dark-mode .help-dialog {
+  background: var(--el-bg-color);
+}
+
+:root.dark-mode .help-nav {
+  border-color: var(--el-border-color-darker);
+}
+
+:root.dark-mode .help-text {
+  color: var(--el-text-color-primary);
 }
 </style> 

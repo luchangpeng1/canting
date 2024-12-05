@@ -1,6 +1,6 @@
 <template>
   <div class="menu-management">
-    <!-- 顶部操作栏 -->
+    <!-- 顶部操作栏,简化按钮 -->
     <div class="top-actions">
       <div class="left">
         <el-button type="primary" @click="showAddDialog">
@@ -17,56 +17,12 @@
           class="date-picker">
         </el-date-picker>
         <el-button 
-          type="warning" 
-          plain
-          @click="showPeakHoursDialog">
-          <el-icon><Timer /></el-icon>
-          高峰时段管理
-        </el-button>
-        <el-button 
           type="primary" 
           plain
           @click="goToDishManagement">
           <el-icon><Plus /></el-icon>
           管理菜品库
         </el-button>
-      </div>
-      <div class="right">
-        <el-select 
-          v-model="canteenFilter" 
-          placeholder="选择餐厅" 
-          clearable 
-          @change="handleFilter"
-          class="filter-item">
-          <el-option
-            v-for="canteen in canteens"
-            :key="canteen.id"
-            :label="canteen.name"
-            :value="canteen.name">
-          </el-option>
-        </el-select>
-        <el-select 
-          v-model="windowFilter" 
-          placeholder="选择窗口" 
-          clearable 
-          @change="handleFilter"
-          class="filter-item">
-          <el-option-group
-            v-for="canteen in canteens"
-            :key="canteen.id"
-            :label="canteen.name">
-            <el-option
-              v-for="window in windows.filter(w => w.canteen === canteen.name)"
-              :key="window.id"
-              :label="window.name"
-              :value="window.id">
-              <span style="float: left">{{ window.name }}</span>
-              <span style="float: right; color: #8492a6; font-size: 13px">
-                {{ window.location }}
-              </span>
-            </el-option>
-          </el-option-group>
-        </el-select>
       </div>
     </div>
 
@@ -80,14 +36,6 @@
           :name="canteen.name">
           <div class="canteen-header">
             <h3>{{ canteen.name }}</h3>
-            <el-button 
-              type="primary" 
-              plain 
-              size="small"
-              @click="showFloorPlan(canteen)">
-              <el-icon><Location /></el-icon>
-              查看平面图
-            </el-button>
           </div>
           
           <el-row :gutter="20">
@@ -117,7 +65,6 @@
                           <div class="menu-time">营业时间：{{ window.operatingHours }}</div>
                           <div class="menu-actions">
                             <el-button 
-                              v-if="window.editable"
                               type="primary" 
                               link 
                               @click="editWindowMenu(window)">
@@ -155,39 +102,14 @@
                               <span class="price">¥{{ row.price }}</span>
                             </template>
                           </el-table-column>
-                          <el-table-column label="库存状态" width="120">
+                          <el-table-column label="操作" width="120" fixed="right">
                             <template #default="{ row }">
-                              <el-tag 
-                                :type="row.stock > 10 ? 'success' : row.stock > 0 ? 'warning' : 'danger'"
-                                size="small">
-                                {{ row.stock > 0 ? `剩余${row.stock}份` : '已售罄' }}
-                              </el-tag>
-                            </template>
-                          </el-table-column>
-                          <el-table-column label="操作" width="150" fixed="right">
-                            <template #default="{ row }">
-                              <template v-if="hasPermission(window.id)">
-                                <el-button 
-                                  type="primary" 
-                                  link 
-                                  @click="updateStock(row)">
-                                  更新库存
-                                </el-button>
-                                <el-button 
-                                  type="danger" 
-                                  link 
-                                  @click="removeDish(row)">
-                                  移除
-                                </el-button>
-                              </template>
-                              <template v-else>
-                                <el-button 
-                                  type="info" 
-                                  link 
-                                  @click="viewDishDetails(row)">
-                                  查看详情
-                                </el-button>
-                              </template>
+                              <el-button 
+                                type="danger" 
+                                link 
+                                @click="removeDish(row)">
+                                移除
+                              </el-button>
                             </template>
                           </el-table-column>
                         </el-table>
@@ -271,193 +193,14 @@
         </el-button>
       </template>
     </el-dialog>
-
-    <!-- 更新库存对话框 -->
-    <el-dialog
-      title="更新库存"
-      v-model="stockDialogVisible"
-      width="400px">
-      <el-form :model="stockForm" label-width="80px">
-        <el-form-item label="当前库存">
-          <el-input-number
-            v-model="stockForm.stock"
-            :min="0"
-            :max="999"
-            controls-position="right">
-          </el-input-number>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="stockDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveStock" :loading="loading">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 添加平面图对话框 -->
-    <el-dialog
-      :title="`${currentCanteen?.name || ''} 平面图`"
-      v-model="floorPlanVisible"
-      width="80%"
-      class="floor-plan-dialog">
-      <div class="floor-plan-container">
-        <!-- 楼层切换 -->
-        <div v-if="currentCanteen?.floors > 1" class="floor-selector">
-          <el-radio-group v-model="currentFloor">
-            <el-radio-button 
-              v-for="floor in currentCanteen.floors" 
-              :key="floor" 
-              :label="floor">
-              {{ floor }}层
-            </el-radio-button>
-          </el-radio-group>
-        </div>
-
-        <!-- 平面图展示 -->
-        <div class="floor-plan">
-          <div class="floor-plan-wrapper">
-            <img :src="getCurrentFloorPlan()" class="floor-plan-image" />
-            
-            <!-- 窗口标记 -->
-            <div 
-              v-for="window in getFloorWindows()" 
-              :key="window.id"
-              class="window-marker"
-              :style="getMarkerStyle(window)"
-              @mouseenter="showWindowInfo(window)"
-              @mouseleave="hideWindowInfo">
-              <el-tooltip
-                :content="getWindowTooltip(window)"
-                placement="top"
-                :visible="hoveredWindow?.id === window.id">
-                <div class="marker-dot"></div>
-              </el-tooltip>
-            </div>
-          </div>
-
-          <!-- 图例说明 -->
-          <div class="floor-plan-legend">
-            <div class="legend-item">
-              <span class="legend-dot available"></span>
-              <span>营业中</span>
-            </div>
-            <div class="legend-item">
-              <span class="legend-dot closed"></span>
-              <span>已打烊</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </el-dialog>
-
-    <!-- 高峰时段管理对话框 -->
-    <el-dialog
-      title="就餐高峰时段管理"
-      v-model="peakHoursDialogVisible"
-      width="60%">
-      <div class="peak-hours-container">
-        <!-- 时段统计图表 -->
-        <div class="chart-container">
-          <div ref="peakHoursChart" class="peak-hours-chart"></div>
-        </div>
-
-        <!-- 高峰时段设置 -->
-        <div class="peak-hours-settings">
-          <div v-for="canteen in canteens" :key="canteen.id" class="canteen-peak-hours">
-            <h4>{{ canteen.name }}</h4>
-            <div class="peak-periods">
-              <div class="period-group">
-                <span class="period-label">午餐高峰：</span>
-                <el-time-select
-                  v-model="peakHours[canteen.name].lunch.start"
-                  start="10:30"
-                  step="00:15"
-                  end="14:00"
-                  placeholder="开始时间"
-                  class="time-select"
-                />
-                <span>至</span>
-                <el-time-select
-                  v-model="peakHours[canteen.name].lunch.end"
-                  start="10:30"
-                  step="00:15"
-                  end="14:00"
-                  placeholder="结束时间"
-                  class="time-select"
-                />
-              </div>
-              <div class="period-group">
-                <span class="period-label">晚餐高峰：</span>
-                <el-time-select
-                  v-model="peakHours[canteen.name].dinner.start"
-                  start="16:30"
-                  step="00:15"
-                  end="20:00"
-                  placeholder="开始时间"
-                  class="time-select"
-                />
-                <span>至</span>
-                <el-time-select
-                  v-model="peakHours[canteen.name].dinner.end"
-                  start="16:30"
-                  step="00:15"
-                  end="20:00"
-                  placeholder="结束时间"
-                  class="time-select"
-                />
-              </div>
-              <div class="crowd-level">
-                <span class="period-label">当前拥��度：</span>
-                <el-tag :type="getCrowdLevelType(canteen.name)">
-                  {{ getCrowdLevelText(canteen.name) }}
-                </el-tag>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 实时提醒设置 -->
-        <div class="notification-settings">
-          <el-divider>实时提醒设置</el-divider>
-          <el-form :model="notificationSettings" label-width="120px">
-            <el-form-item label="拥挤度提醒">
-              <el-switch v-model="notificationSettings.crowdAlert" />
-            </el-form-item>
-            <el-form-item label="提醒阈值">
-              <el-slider
-                v-model="notificationSettings.crowdThreshold"
-                :min="0"
-                :max="100"
-                :step="10"
-                :disabled="!notificationSettings.crowdAlert"
-                show-stops
-              />
-            </el-form-item>
-          </el-form>
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="peakHoursDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="savePeakHours">保存设置</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { 
-  Plus, 
-  Edit, 
-  Search,
-  Delete,
-  Location,
-  Timer
-} from '@element-plus/icons-vue'
+import { Plus, Edit, Search } from '@element-plus/icons-vue'
 import request from '../../utils/request'
-import * as echarts from 'echarts'
 import { useRouter } from 'vue-router'
 
 export default {
@@ -465,14 +208,9 @@ export default {
   components: {
     Plus,
     Edit,
-    Search,
-    Delete,
-    Location,
-    Timer
+    Search
   },
   setup() {
-  
-
     // ===== 模拟数据开始 =====
     // 菜品数据
     const mockDishes = [
@@ -512,7 +250,8 @@ export default {
       { id: 3, name: '馨园餐厅', floors: 1, location: '教学区' },
       { id: 4, name: '仲园餐厅', floors: 2, location: '图书馆附近' },
       { id: 5, name: '雅园餐厅', floors: 1, location: '体育馆附近' },
-      { id: 6, name: '服务点', floors: 1, location: 'F区、A区' }
+      { id: 6, name: 'A区服务点', floors: 1, location: 'A区教学楼' },
+      { id: 7, name: 'F区服务点', floors: 1, location: 'F区教学楼' }
     ]
 
     // 窗口数据
@@ -539,6 +278,36 @@ export default {
         location: '沁园餐厅一楼',
         operatingHours: '10:30-13:30, 16:30-19:00',
         canteen: '沁园餐厅'
+      },
+      // A区服务点窗口
+      {
+        id: 601,
+        name: 'A区-快餐窗口',
+        location: 'A区教学楼一楼',
+        operatingHours: '10:30-13:30, 16:30-19:00',
+        canteen: 'A区服务点'
+      },
+      {
+        id: 602,
+        name: 'A区-饮品店',
+        location: 'A区教学楼一楼',
+        operatingHours: '08:00-20:00',
+        canteen: 'A区服务点'
+      },
+      // F区服务点窗口
+      {
+        id: 701,
+        name: 'F区-快餐窗口',
+        location: 'F区教学楼一楼',
+        operatingHours: '10:30-13:30, 16:30-19:00',
+        canteen: 'F区服务点'
+      },
+      {
+        id: 702,
+        name: 'F区-饮品店',
+        location: 'F区教学楼一楼',
+        operatingHours: '08:00-20:00',
+        canteen: 'F区服务点'
       }
     ]
 
@@ -565,7 +334,7 @@ export default {
 
     // 高峰时段数据
     const mockPeakHours = {
-      '中���食堂': {
+      '中食堂': {
         lunch: { start: '11:30', end: '12:30' },
         dinner: { start: '17:30', end: '18:30' }
       },
@@ -585,7 +354,6 @@ export default {
        // 状态定义
     // 基础数据
     const selectedDate = ref(new Date())
-    const windowFilter = ref('')
     const activeWindows = ref([])
     const currentWindow = ref(null)
     const isPublished = ref(false)
@@ -616,19 +384,7 @@ export default {
 
     // 计算属性
     const filteredWindows = computed(() => {
-      let result = windows.value
-      if (canteenFilter.value) {
-        result = result.filter(w => w.canteen === canteenFilter.value)
-      }
-      if (windowFilter.value) {
-        result = result.filter(w => w.id === windowFilter.value)
-      }
-      // 如果是已验证用户，只显示其管理的窗口的编辑按钮
-      result = result.map(window => ({
-        ...window,
-        editable: hasPermission(window.id)
-      }))
-      return result
+      return windows.value.filter(w => w.canteen === activeCanteen.value)
     })
 
     const filteredAvailableDishes = computed(() => {
@@ -649,10 +405,6 @@ export default {
       } catch (error) {
         ElMessage.error('获取菜单数据失败')
       }
-    }
-
-    const handleFilter = () => {
-      // 窗口筛选逻辑已通过计算属性实现
     }
 
     const editWindowMenu = (window) => {
@@ -715,7 +467,7 @@ export default {
           date: selectedDate.value,
           dishes: selectedDishes.value.map(d => d.id)
         })
-        ElMessage.success('菜单保存成功')
+        ElMessage.success('菜单存成功')
         dialogVisible.value = false
         await fetchMenus()
       } catch (error) {
@@ -997,7 +749,7 @@ export default {
       // ... 其他餐厅的数据
     })
 
-    // 显示高峰时段对话框
+    // 示高峰时段对话框
     const showPeakHoursDialog = () => {
       peakHoursDialogVisible.value = true
       nextTick(() => {
@@ -1071,25 +823,6 @@ export default {
       peakHoursDialogVisible.value = false
     }
 
-    // 模拟实时数据更新
-    let timer = null
-    const startRealTimeUpdate = () => {
-      timer = setInterval(() => {
-        Object.keys(crowdData).forEach(canteen => {
-          crowdData[canteen].current = Math.floor(Math.random() * 100)
-        })
-      }, 5000)
-    }
-
-    onMounted(() => {
-      startRealTimeUpdate()
-    })
-
-    onUnmounted(() => {
-      if (timer) clearInterval(timer)
-      if (chart) chart.dispose()
-    })
-
     const activeCanteen = ref('中央食堂')
 
     const router = useRouter()
@@ -1111,62 +844,34 @@ export default {
 
     return {
       selectedDate,
-      windowFilter,
       activeWindows,
       activeCanteen,
       currentWindow,
       isPublished,
       loading,
+      canteens,
       menus,
       windows,
       dishes,
       selectedDishes,
       dialogVisible,
-      stockDialogVisible,
       dishSearchQuery,
       dishCategoryFilter,
       categories,
-      stockForm,
       filteredWindows,
       filteredAvailableDishes,
       handleDateChange,
-      handleFilter,
       editWindowMenu,
       getWindowDishes,
       handleSelectionChange,
       removeSelectedDish,
-      updateStock,
-      saveStock,
-      saveWindowMenu,
       removeDish,
       disabledDate,
       formatDate,
       getCategoryType,
       showAddDialog,
-      canteens,
-      canteenFilter,
-      floorPlanVisible,
-      currentCanteen,
-      currentFloor,
-      hoveredWindow,
-      showFloorPlan,
-      getCurrentFloorPlan,
-      getFloorWindows,
-      getMarkerStyle,
-      showWindowInfo,
-      hideWindowInfo,
-      getWindowTooltip,
-      peakHoursDialogVisible,
-      peakHoursChart,
-      peakHours,
-      notificationSettings,
-      showPeakHoursDialog,
-      getCrowdLevelType,
-      getCrowdLevelText,
-      savePeakHours,
       goToDishManagement,
-      hasPermission,
-      userVerification
+      saveWindowMenu
     }
   }
 }
@@ -1179,7 +884,6 @@ export default {
 
 .top-actions {
   display: flex;
-  justify-content: space-between;
   margin-bottom: 20px;
 }
 
@@ -1313,11 +1017,6 @@ export default {
 
 ::-webkit-scrollbar-track {
   background: #f5f7fa;
-}
-
-.filter-item {
-  margin-right: 10px;
-  width: 160px;
 }
 
 .canteen-tabs {
