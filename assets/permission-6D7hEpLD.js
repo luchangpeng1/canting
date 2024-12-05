@@ -1,0 +1,1 @@
+const o=()=>{var r;const e=JSON.parse(localStorage.getItem("user")||"{}").verifiedInfo;return(e==null?void 0:e.role)==="superadmin"?!0:(r=e==null?void 0:e.window)==null?void 0:r.id},n=()=>{var e;return((e=JSON.parse(localStorage.getItem("user")||"{}").verifiedInfo)==null?void 0:e.role)==="superadmin"};export{o as c,n as i};
