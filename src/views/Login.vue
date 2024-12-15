@@ -424,7 +424,7 @@ import Validator from '@/utils/validator'
 // 静态测试账号
 const testAccounts = [
   {
-    username: '2200000001',  // 学生测试账号
+    username: '2200580121',  // 学生测试账号
     password: '123456',
     userType: 'student',
     realName: '测试学生',
@@ -589,7 +589,53 @@ export default {
       try {
         loading.value = true
 
-        // 真实后端登录请求
+        // 先检查是否匹配测试账号
+        const testAccount = testAccounts.find(account => 
+          account.username === loginData.username && 
+          account.password === loginData.password &&
+          account.userType === loginData.userType
+        )
+
+        if (testAccount) {
+          // 使用测试账号数据
+          const userInfo = {
+            username: testAccount.username,
+            userType: testAccount.userType,
+            realName: testAccount.realName,
+            verifiedInfo: testAccount.verifiedInfo
+          }
+          
+          console.log('使用测试账号登录:', userInfo)
+          
+          localStorage.setItem('user', JSON.stringify(userInfo))
+          localStorage.setItem('token', 'test-token')
+          
+          ElMessage.success('登录成功')
+
+          // 根据角色跳转
+          switch(userInfo.verifiedInfo.role) {
+            case 'admin':
+              await router.push('/admin/dishes')
+              break
+            
+            case 'window_admin':
+              await router.push('/m/admin/orders')
+              break
+              
+            case 'student':
+              await router.push('/student/home')
+              break
+              
+            default:
+              console.error('未知的用户类型:', userInfo.verifiedInfo.role)
+              ElMessage.error('用户类型错误')
+              return
+          }
+
+          return Result.success(userInfo)
+        }
+
+        // 如果不是测试账号，再尝试后端登录
         const response = await http.post('/auth/login', {
           username: loginData.username,
           password: loginData.password, 
