@@ -44,11 +44,19 @@
                     </div>
                   </el-option>
                   <el-option 
-                    label="食堂管理员" 
+                    label="系统管理员" 
                     value="admin">
                     <div class="select-option">
                       <el-icon><Setting /></el-icon>
-                      <span>食堂管理员</span>
+                      <span>系统管理员</span>
+                    </div>
+                  </el-option>
+                  <el-option 
+                    label="窗口管理员" 
+                    value="window_admin">
+                    <div class="select-option">
+                      <el-icon><Shop /></el-icon>
+                      <span>窗口管理员</span>
                     </div>
                   </el-option>
                 </el-select>
@@ -71,11 +79,19 @@
                     </div>
                   </el-option>
                   <el-option 
-                    label="食堂管理员" 
+                    label="系统管理员" 
                     value="admin">
                     <div class="select-option">
                       <el-icon><Setting /></el-icon>
-                      <span>食堂管理员</span>
+                      <span>系统管理员</span>
+                    </div>
+                  </el-option>
+                  <el-option 
+                    label="窗口管理员" 
+                    value="window_admin">
+                    <div class="select-option">
+                      <el-icon><Shop /></el-icon>
+                      <span>窗口管理员</span>
                     </div>
                   </el-option>
                 </el-select>
@@ -86,7 +102,7 @@
                 prop="username">
                 <el-input 
                   v-model="form.username" 
-                  :placeholder="isLogin ? '请输入学号/工号' : '学号为8位数字，工号为5位数字'"
+                  :placeholder="isLogin ? '请输入学号/工号' : '学号为10位数字，工号为5位数字'"
                   prefix-icon="User">
                 </el-input>
               </el-form-item>
@@ -223,11 +239,19 @@
                 </div>
               </el-option>
               <el-option 
-                label="食堂管理员" 
+                label="系统管理员" 
                 value="admin">
                 <div class="select-option">
                   <el-icon><Setting /></el-icon>
-                  <span>食堂管理员</span>
+                  <span>系统管理员</span>
+                </div>
+              </el-option>
+              <el-option 
+                label="窗口管理员" 
+                value="window_admin">
+                <div class="select-option">
+                  <el-icon><Shop /></el-icon>
+                  <span>窗口管理员</span>
                 </div>
               </el-option>
             </el-select>
@@ -250,11 +274,19 @@
                 </div>
               </el-option>
               <el-option 
-                label="食堂管理员" 
+                label="系统管理员" 
                 value="admin">
                 <div class="select-option">
                   <el-icon><Setting /></el-icon>
-                  <span>食堂管理员</span>
+                  <span>系统管理员</span>
+                </div>
+              </el-option>
+              <el-option 
+                label="窗口管理员" 
+                value="window_admin">
+                <div class="select-option">
+                  <el-icon><Shop /></el-icon>
+                  <span>窗口管理员</span>
                 </div>
               </el-option>
             </el-select>
@@ -265,7 +297,7 @@
             prop="username">
             <el-input 
               v-model="form.username" 
-              :placeholder="isLogin ? '请输入学号/工号' : '学号为8位数字，工号为5位数字'"
+              :placeholder="isLogin ? '请输入学号/工号' : '学号为10位数字，工号为5位数字'"
               prefix-icon="User">
             </el-input>
           </el-form-item>
@@ -385,12 +417,14 @@ import {
   Message,
   Lock
 } from '@element-plus/icons-vue'
-import http from '../utils/request'
+import http from '@/utils/request'
+import Result from '@/utils/result'
+import Validator from '@/utils/validator'
 
 // 静态测试账号
 const testAccounts = [
   {
-    username: 'student001',  // 学生测试账号
+    username: '2200000001',  // 学生测试账号
     password: '123456',
     userType: 'student',
     realName: '测试学生',
@@ -399,19 +433,19 @@ const testAccounts = [
     }
   },
   {
-    username: 'admin001',    // PC端超级管理员
+    username: '00001',    // PC端系统管理员
     password: '123456', 
     userType: 'admin',
-    realName: '超级管理员',
+    realName: '系统管理员',
     verifiedInfo: {
-      role: 'superadmin',
+      role: 'admin',
       permissions: ['all']
     }
   },
   {
-    username: 'window001',   // 移动端窗口管理员
+    username: '123456',   // 移动端窗口管理员
     password: '123456',
-    userType: 'admin',
+    userType: 'window_admin',
     realName: '窗口管理员',
     verifiedInfo: {
       role: 'window_admin',
@@ -461,28 +495,77 @@ export default {
       userType: ''
     })
 
+    // 修改验证规则部分
     const rules = {
       username: [
         { required: true, message: '请输入用户名', trigger: 'blur' },
-        { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' },
-        { pattern: /^[a-zA-Z0-9_]+$/, message: '只能包含字母、数字和下划线', trigger: 'blur' }
+        { 
+          validator: (rule, value, callback) => {
+            if (!value) {
+              callback();
+              return;
+            }
+            
+            if (form.userType === 'student') {
+              if (!/^\d{10}$/.test(value)) {
+                callback(new Error('学号必须是10位数字'));
+                return;
+              }
+            } else if (form.userType === 'admin' || form.userType === 'window_admin') {
+              if (!/^\d{5}$/.test(value)) {
+                callback(new Error('工号必须是5位数字'));
+                return;
+              }
+            }
+            callback();
+          },
+          trigger: ['blur', 'change']
+        }
       ],
       password: [
         { required: true, message: '请输入密码', trigger: 'blur' },
-        { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' }
+        { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
+        {
+          validator: (rule, value, callback) => {
+            if (!value) {
+              callback();
+              return;
+            }
+            
+            // 登录模式下不验证密码复杂度
+            if (isLogin.value) {
+              callback();
+              return;
+            }
+            
+            // 注册模式下验证密码复杂度
+            const hasNumber = /\d/.test(value);
+            const hasLetter = /[a-zA-Z]/.test(value);
+            
+            if (!hasNumber || !hasLetter) {
+              callback(new Error('密码必须包含数字和字母'));
+              return;
+            }
+            
+            callback();
+          },
+          trigger: ['blur', 'change']
+        }
       ],
       confirmPassword: [
         { 
-          required: true, 
-          message: '请确认密码', 
-          trigger: 'blur',
           validator: (rule, value, callback) => {
-            if (value !== form.password) {
-              callback(new Error('两次输入的密码不一致'))
-            } else {
-              callback()
+            if (!isLogin.value && !value) {
+              callback(new Error('请确认密码'));
+              return;
             }
-          }
+            if (value !== form.password) {
+              callback(new Error('两次输入的密码不一致'));
+              return;
+            }
+            callback();
+          },
+          trigger: ['blur', 'change']
         }
       ],
       userType: [
@@ -505,51 +588,63 @@ export default {
     const handleLogin = async (loginData) => {
       try {
         loading.value = true
-        
-        // 判断是否使用测试账号
-        const testAccount = testAccounts.find(
-          account => account.username === loginData.username && 
-                    account.userType === loginData.userType
-        )
 
-        if (testAccount) {
-          // 使用测试账号登录
-          if (testAccount.password === loginData.password) {
-            const userInfo = {
-              username: testAccount.username,
-              userType: testAccount.userType,
-              realName: testAccount.realName,
-              verifiedInfo: testAccount.verifiedInfo || { // 确保有验证信息
-                role: testAccount.userType === 'admin' ? 'window_admin' : 'student',
-                canteen: { id: 1, name: '中央食堂' },
-                window: { id: 101, name: '大荤窗口' }
-              }
-            }
-            localStorage.setItem('user', JSON.stringify(userInfo))
-            localStorage.setItem('token', 'test-token')
-            ElMessage.success('登录成功')
+        // 真实后端登录请求
+        const response = await http.post('/auth/login', {
+          username: loginData.username,
+          password: loginData.password, 
+          userType: loginData.userType
+        })
 
-            // 根据用户类型和设备判断跳转路径
-            if (testAccount.userType === 'admin') {
-              if (isMobile()) {
-                router.push('/m/admin/orders') // 移动端窗口管理员跳转到订单页面
-              } else {
-                router.push('/admin/dishes') // PC端管理员跳转到菜品管理
-              }
-            } else {
-              router.push('/student/home') // 学生用户跳转到首页
-            }
-            return
+        console.log('登录响应数据:', response)
+
+        if (response.code === Result.CODE.SUCCESS) {
+          // 构造标准格式的用户信息对象
+          const userInfo = {
+            username: loginData.username,
+            userType: loginData.userType,
+            verifiedInfo: {
+              role: loginData.userType === 'admin' ? 'superadmin' : 
+                    loginData.userType === 'window_admin' ? 'window_admin' : 'student'
+            },
+            ...response.data
           }
-          ElMessage.error('密码错误')
-          return
-        }
+          
+          console.log('存储的用户信息:', userInfo)
+          
+          localStorage.setItem('user', JSON.stringify(userInfo))
+          localStorage.setItem('token', response.data.token)
+          
+          ElMessage.success('登录成功')
 
-        // 如果不是测试账号，显示错误信息
-        ElMessage.error('用户名或密码错误')
-        
+          // 移除设备类型限制,直接根据角色跳转
+          switch(userInfo.verifiedInfo.role) {
+            case 'superadmin':
+              await router.push('/admin/dishes')
+              break
+            
+            case 'window_admin':
+              await router.push('/m/admin/orders')
+              break
+              
+            case 'student':
+              await router.push('/student/home')
+              break
+              
+            default:
+              console.error('未知的用户类型:', userInfo.verifiedInfo.role)
+              ElMessage.error('用户类型错误')
+              return
+          }
+
+          return Result.success(response.data)
+        } else {
+          ElMessage.error(response.message || '登录失败')
+          return Result.error(response.message || '登录失败')
+        }
       } catch (error) {
-        ElMessage.error(error.message || '登录失败，请重试')
+        console.error('登录失败:', error)
+        return Result.serviceError(error.message)
       } finally {
         loading.value = false
       }
@@ -559,24 +654,60 @@ export default {
     const handleRegister = async (registerData) => {
       try {
         loading.value = true
-        const response = await http.post('/auth/register', {
-          username: registerData.username,
-          password: registerData.password,
-          userType: registerData.userType
-        })
-        
-        if (response.code === 200) {
-          ElMessage.success('注册成功，请登录')
-          isLogin.value = true
-          // 清空表单
-          form.username = ''
-          form.password = ''
-          form.confirmPassword = ''
-          form.userType = ''
+
+        // 验证用户名
+        if (registerData.userType === 'student') {
+          if (!/^\d{10}$/.test(registerData.username)) {
+            ElMessage.error('请输入10位数字学号')
+            return Result.paramError('请输入10位数字学号')
+          }
+        } else if (registerData.userType === 'admin' || registerData.userType === 'window_admin') {  // 添加窗口管理员验证
+          if (!/^\d{5}$/.test(registerData.username)) {
+            ElMessage.error('请输入5位数字工号')
+            return Result.paramError('请输入5位数字工号')
+          }
+        }
+
+        // 验证密码
+        const passwordValidation = Validator.validatePassword(registerData.password)
+        if (!passwordValidation.valid) {
+          ElMessage.error(passwordValidation.message)
+          return Result.paramError(passwordValidation.message)
+        }
+
+        // 真实后端注册请求
+        try {
+          const response = await http.post('/auth/register', {
+            username: registerData.username,
+            password: registerData.password,
+            userType: registerData.userType
+          })
+          
+          if (response.code === Result.CODE.SUCCESS) {
+            ElMessage.success('注册成功，请登录')
+            isLogin.value = true
+            // 清空表单
+            form.username = ''
+            form.password = ''
+            form.confirmPassword = ''
+            form.userType = ''
+            return Result.success()
+          }
+        } catch (error) {
+          console.error('注册请求错误:', error.response?.data)
+          if (error.response?.status === 409) {
+            ElMessage.error('该账号已被注册')
+          } else if (error.response?.status === 500) {
+            ElMessage.error('服务器错误: ' + (error.response.data?.message || '注册失败'))
+          } else {
+            ElMessage.error(error.response?.data?.message || '注册失败，请重试')
+          }
+          return Result.serviceError(error.message)
         }
       } catch (error) {
         console.error('注册失败:', error)
-        ElMessage.error(error.message || '注册失败，请重试')
+        ElMessage.error('注册失败，请重试')
+        return Result.serviceError(error.message)
       } finally {
         loading.value = false
       }
@@ -592,16 +723,21 @@ export default {
         const submitData = {
           username: form.username,
           password: form.password,
-          userType: form.userType
+          userType: form.userType  // 确保这里正确获取了userType
         }
 
-        if (isLogin.value) {
-          await handleLogin(submitData)
-        } else {
+        console.log('提交数据:', submitData) // 添加调试日志
+
+        const result = isLogin.value ? 
+          await handleLogin(submitData) : 
           await handleRegister(submitData)
+
+        if (!result.success) {
+          ElMessage.error(result.message)
         }
       } catch (error) {
         console.error('表单验证失败:', error)
+        return Result.paramError(error.message)
       }
     }
 
@@ -635,30 +771,45 @@ export default {
         if (response.code === 200) {
           qrCodeUrl.value = response.data.qrCode
           return response.data.sceneId
+        } else {
+          ElMessage.error(response.message || '获取二维码失败')
         }
       } catch (error) {
         console.error('获取二维码失败:', error)
         ElMessage.error('获取二维码失败，请重试')
+        return null
       }
     }
 
     // 轮询扫码状态
     const pollScanStatus = async (sceneId) => {
       try {
-        const response = await http.get('/auth/wechat/scan/status', { sceneId })
+        const response = await http.get('/auth/wechat/scan/status', {
+          params: { sceneId }
+        })
+        
         if (response.code === 200) {
-          qrStatus.value = ['等待扫码', '已扫码，请在手机上确认', '登录成功', '已取消', '已过期'][response.data.status]
+          const statusMessages = [
+            '等待扫码',
+            '已扫码，请在手机上确认',
+            '登录成功',
+            '已取消',
+            '已过期'
+          ]
+          qrStatus.value = statusMessages[response.data.status]
           
-          if (response.data.status === 2) {
-            // 登录成功
+          if (response.data.status === 2) { // 登录成功
             localStorage.setItem('token', response.data.token)
             localStorage.setItem('refreshToken', response.data.refreshToken)
             localStorage.setItem('user', JSON.stringify(response.data.userInfo))
             ElMessage.success('登录成功')
             qrDialogVisible.value = false
             clearInterval(scanTimer)
+            
+            // 根据用户类型跳转
+            const userInfo = response.data.userInfo
             const redirect = router.currentRoute.value.query.redirect || 
-              (response.data.userInfo.userType === 'admin' ? '/admin/dishes' : '/student/home')
+              (userInfo.userType === 'admin' ? '/admin/dishes' : '/student/home')
             router.push(redirect)
           } else if (response.data.status === 3 || response.data.status === 4) {
             clearInterval(scanTimer)
@@ -667,36 +818,37 @@ export default {
       } catch (error) {
         console.error('查询状态失败:', error)
         clearInterval(scanTimer)
+        ElMessage.error('查询状态失败，请重试')
       }
     }
 
-    // 显示二维码
+    // 显示二维码对话框
     const showQRCode = async () => {
       qrDialogVisible.value = true
       qrStatus.value = '等待扫码'
       
       try {
-        // 先用���例二维码
-        qrCodeUrl.value = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=WeChat_Login_GUET'
-        
-        // 实际项目中，获取真实二维码并开始轮询
-        // const sceneId = await getWechatQRCode()
-        // if (sceneId) {
-        //   scanTimer = setInterval(() => pollScanStatus(sceneId), 2000)
-        // }
+        const sceneId = await getWechatQRCode()
+        if (sceneId) {
+          // 开始轮询扫码状态
+          scanTimer = setInterval(() => pollScanStatus(sceneId), 2000)
+        }
       } catch (error) {
         console.error('显示二维码失败:', error)
+        ElMessage.error('显示二维码失败，请重试')
       }
     }
 
     // 刷新二维码
     const refreshQRCode = async () => {
-      clearInterval(scanTimer)
+      if (scanTimer) {
+        clearInterval(scanTimer)
+      }
       qrStatus.value = '等待扫码'
       await showQRCode()
     }
 
-    // 组件卸载时清理定时器
+    // 在组件卸载时清理定时器
     onUnmounted(() => {
       if (scanTimer) {
         clearInterval(scanTimer)

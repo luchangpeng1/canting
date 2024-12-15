@@ -17,6 +17,7 @@
           <el-input 
             v-model.number="form.amount" 
             type="number"
+            @input="handleAmountInput"
             placeholder="请输入提现金额">
             <template #prefix>¥</template>
             <template #append>
@@ -240,19 +241,31 @@ const form = reactive({
 const rules = {
   amount: [
     { required: true, message: '请输入提现金额' },
-    { type: 'number', message: '提现金额必须为数字' },
-    { min: 100, message: '最低提现金额为100元' },
-    { max: 50000, message: '单笔提现上限为50000元' },
-    { validator: (rule, value, callback) => {
-      if (value > balance.value) {
-        callback(new Error('提现金额不能大于余额'))
-      } else {
+    { 
+      validator: (rule, value, callback) => {
+        if (typeof value !== 'number') {
+          callback(new Error('请输入有效的提现金额'))
+          return
+        }
+        if (value < 100) {
+          callback(new Error('最低提现金额为100元'))
+          return
+        }
+        if (value > 50000) {
+          callback(new Error('单笔提现上限为50000元'))
+          return
+        }
+        if (value > balance.value) {
+          callback(new Error('提现金额不能大于余额'))
+          return
+        }
         callback()
-      }
-    }}
+      },
+      trigger: 'change'
+    }
   ],
   bankAccount: [
-    { required: true, message: '请选择提现账户' }
+    { required: true, message: '请选择提现账户', trigger: 'change' }
   ]
 }
 
@@ -265,6 +278,9 @@ const loading = ref(false)
 
 const setMaxAmount = () => {
   form.amount = Math.min(balance.value, 50000)
+  if (formRef.value) {
+    formRef.value.validateField('amount')
+  }
 }
 
 const withdrawHistory = ref([
@@ -305,25 +321,43 @@ const handleWithdraw = async () => {
   if (!formRef.value) return
   
   try {
+    // 首先检查是否填写了必要信息
+    if (!form.amount || !form.bankAccount) {
+      ElMessage.warning('请填写完整的提现信息')
+      return
+    }
+
+    // 然后进行表单验证
     await formRef.value.validate()
+    
     loading.value = true
+    
+    const withdrawAmount = form.amount
+    const selectedAccount = bankAccounts.find(acc => acc.id === form.bankAccount)
     
     await new Promise(resolve => setTimeout(resolve, 1000))
     
     ElMessage.success('提现申请已提交')
-    form.amount = ''
-    form.bankAccount = ''
-    
-    remainingWithdrawals.value--
     
     withdrawHistory.value.unshift({
       id: Date.now(),
-      amount: form.amount,
+      amount: withdrawAmount,
       status: 'pending',
-      bankInfo: bankAccounts.find(acc => acc.id === form.bankAccount)?.label || '',
+      bankInfo: selectedAccount?.label || '',
       createTime: new Date().toISOString()
     })
+    
+    remainingWithdrawals.value--
+    
+    form.amount = ''
+    form.bankAccount = ''
+    
   } catch (error) {
+    if (error.message) {
+      ElMessage.error(error.message)
+    } else {
+      ElMessage.error('提现申请失败，请重试')
+    }
     console.error('提现失败：', error)
   } finally {
     loading.value = false
@@ -414,6 +448,10 @@ const handleBind = async () => {
 }
 
 const wechatQRCode = 'https://example.com/wechat-qr.png'
+
+const handleAmountInput = (value) => {
+  form.amount = parseFloat(value) || ''
+}
 </script>
 
 <style scoped>

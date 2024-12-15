@@ -1,14 +1,19 @@
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import router from '../router'
+import Result from '@/utils/result'
 
 // 创建 axios 实例
 const service = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api', // 从环境变量获取 API 地址
+  baseURL: import.meta.env.VITE_API_URL, // 使用环境变量中配置的后端地址
   timeout: 15000, // 请求超时时间
-  withCredentials: true, // 跨域请求时发送 cookie
+  withCredentials: false, // 改为 false，除非后端特别配置了允许携带凭证
   headers: {
-    'Content-Type': 'application/json;charset=utf-8'
+    'Content-Type': 'application/json;charset=utf-8',
+    // 添加跨域请求头
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Origin, Content-Type, Accept, Authorization'
   }
 })
 
@@ -50,60 +55,51 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   response => {
     const res = response.data
-
-    // 处理文件下载
-    if (response.config.responseType === 'blob') {
-      return response
-    }
-
-    // 成功状态处理
-    if (res.code === 200 || res.status === 'success') {
+    
+    if (res.code === Result.CODE.SUCCESS) {
       return res
     }
-
-    // 处理特定错误码
-    switch (res.code) {
-      case 401: // 未登录或 token 过期
-        handleUnauthorized(response.config)
+    
+    // 处理特定错误
+    switch(res.code) {
+      case Result.CODE.TOKEN_EXPIRED:
+      case Result.CODE.TOKEN_INVALID:
+        router.push('/login')
         break
-      case 403: // 权限不足
-        ElMessage.error('权限不足')
-        router.push('/403')
+        
+      case Result.CODE.ADMIN_LOGIN_AUTH:
+      case Result.CODE.APP_LOGIN_AUTH:
+        router.push('/login')
         break
-      case 404: // 资源不存在
-        ElMessage.error('请求的资源不存在')
-        break
-      case 500: // 服务器错误
-        ElMessage.error('服务器错误，请稍后重试')
-        break
+        
       default:
-        ElMessage.error(res.message || '请求失败')
+        ElMessage.error(res.message || '操作失败')
     }
-
-    return Promise.reject(new Error(res.message || '请求失败'))
+    
+    return Promise.reject(res)
   },
   error => {
-    console.error('响应拦截器错误:', error)
-
-    // 处理请求超时
-    if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
-      ElMessage.error('请求超时，请重试')
-      return Promise.reject(new Error('请求超时'))
+    console.error('请求错误详情:', error.response?.data)
+    console.error('完整错误信息:', error)
+    
+    if (error.response) {
+      const errorData = error.response.data
+      switch (error.response.status) {
+        case 400:
+          ElMessage.error('请求参数错误: ' + (errorData.message || errorData.error || ''))
+          break
+        case 500:
+          ElMessage.error('服务器错误: ' + (errorData.message || errorData.error || '内部错误'))
+          console.error('详细错误:', errorData)
+          break
+        default:
+          ElMessage.error(errorData.message || errorData.error || '请求失败')
+      }
+    } else if (error.request) {
+      ElMessage.error('网络连接失败，请检查网络设置')
+    } else {
+      ElMessage.error('请求配置错误')
     }
-
-    // 处理网络错误
-    if (!window.navigator.onLine) {
-      ElMessage.error('网络连接已断开，请检查网络')
-      return Promise.reject(new Error('网络连接已断开'))
-    }
-
-    // 处理取消请求
-    if (axios.isCancel(error)) {
-      return Promise.reject(new Error('请求已取消'))
-    }
-
-    // 其他错误处理
-    ElMessage.error(error.message || '请求失败')
     return Promise.reject(error)
   }
 )
@@ -126,11 +122,12 @@ const handleUnauthorized = async (failedRequest) => {
     const response = await service.post('/auth/refresh-token', {
       refreshToken: localStorage.getItem('refreshToken')
     })
-
+    
     if (response.code === 200) {
       // 更新 token
-      const { token } = response.data
+      const { token, refreshToken: newRefreshToken } = response.data
       localStorage.setItem('token', token)
+      localStorage.setItem('refreshToken', newRefreshToken)
 
       // 重试队列中的请求
       requests.forEach(callback => callback())

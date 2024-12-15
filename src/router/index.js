@@ -226,75 +226,79 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  // 检查是否为移动端
+  // 获取登录状态
+  const token = localStorage.getItem('token')
+  const userInfo = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null
+  const userRole = userInfo?.verifiedInfo?.role
+
+  // 先处理移动端重定向
   if (isMobile()) {
-    // 避免重复重定向，检查目标路径是否已经是移动端路径
-    if (to.path.startsWith('/admin') && !to.path.startsWith('/m/admin')) {
-      next('/m/admin' + to.path.slice(6))
-      return
-    }
-    if (to.path.startsWith('/student') && !to.path.startsWith('/m/student')) {
-      next('/m/student' + to.path.slice(8)) 
-      return
-    }
-  }
-
-  // 检查登录状态
-  const hasToken = localStorage.getItem('token')
-  const userInfo = localStorage.getItem('user') 
-    ? JSON.parse(localStorage.getItem('user'))
-    : null
-
-  // 需要登录的页面
-  if (to.meta.requiresAuth) {
-    if (!hasToken || !userInfo) {
-      // 避免在登录页面重复重定向
-      if (to.path !== '/login') {
-        next('/login')
+    // 如果已经是移动端路径，不需要重定向
+    if (!to.path.startsWith('/m/')) {
+      if (to.path.startsWith('/admin')) {
+        next('/m/admin' + to.path.slice(6))
+        return
+      }
+      if (to.path.startsWith('/student')) {
+        next('/m/student' + to.path.slice(8))
         return
       }
     }
+  }
+
+  // 处理根路径
+  if (to.path === '/') {
+    next('/login')
+    return
+  }
+
+  // 如果已登录且访问登录页，重定向到对应的首页
+  if (to.path === '/login' && token && userInfo) {
+    console.log('当前用户角色:', userRole)
+    
+    switch(userRole) {
+      case 'superadmin':
+        next('/admin/dishes')
+        return
+      case 'window_admin':
+        next('/m/admin/orders')
+        return
+      case 'student':
+        next('/student/home')
+        return
+      default:
+        next()
+        return
+    }
+  }
+
+  // 需要登录的页面
+  if (to.meta.requiresAuth) {
+    if (!token || !userInfo) {
+      next('/login')
+      return
+    }
 
     // 检查角色权限
-    const userRole = userInfo?.verifiedInfo?.role
     if (to.meta.role === 'admin') {
-      // 超级管理员和窗口管理员的处理
       if (userRole === 'superadmin') {
-        // 超级管理员只能访问PC端
         if (to.path.startsWith('/m/')) {
           next('/admin/dishes')
           return
         }
       } else if (userRole === 'window_admin') {
-        // 窗口管理员只能访问移动端
         if (!to.path.startsWith('/m/')) {
           next('/m/admin/orders')
           return
         }
-      } else if (to.path !== '/login') {
+      } else {
         next('/login')
         return
       }
     }
   }
 
-  // 如果访问登录页且已登录
-  if (to.path === '/login' && hasToken && userInfo) {
-    const userRole = userInfo?.verifiedInfo?.role
-    
-    // 根据角色重定向，避免重复重定向
-    if (userRole === 'superadmin' && from.path !== '/admin/dishes') {
-      next('/admin/dishes')  // 超级管理员去PC端
-    } else if (userRole === 'window_admin' && from.path !== '/m/admin/orders') {
-      next('/m/admin/orders')  // 窗口管理员只去移动端
-    } else if (userRole === 'student' && from.path !== '/student/home') {
-      next('/student/home')  // 学生去学生端
-    } else {
-      next()
-    }
-    return
-  }
-
+  // 如果没有特殊情况，正常放行
   next()
 })
 

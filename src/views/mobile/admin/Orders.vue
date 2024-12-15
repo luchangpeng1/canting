@@ -18,6 +18,7 @@
         placeholder="筛选条件"
         size="small"
         style="width: 120px"
+        @change="handleFilterTypeChange"
       >
         <el-option label="订单号" value="orderNo" />
         <el-option label="学生姓名" value="studentName" />
@@ -93,14 +94,14 @@
         v-model="searchQuery"
         placeholder="搜索订单号/学生姓名"
         clearable
-        @input="handleSearch"
       >
         <template #prefix>
           <el-icon><Search /></el-icon>
         </template>
       </el-input>
-      <el-button @click="showFilter = true">
-        <el-icon><Filter /></el-icon>
+      <el-button type="primary" @click="handleSearch">
+        <el-icon><Search /></el-icon>
+        搜索
       </el-button>
     </div>
 
@@ -227,7 +228,6 @@
               <div class="order-card-header">
                 <div class="order-basic-info">
                   <div class="order-info">
-                    
                     <div class="order-info-left">
                       <span class="order-no">订单号：{{ order.orderNo }}</span>
                     </div>
@@ -438,6 +438,7 @@ import dayjs from 'dayjs'
 import notificationSound from '@/mp3/叮咚.mp3'
 import { User, InfoFilled, Search, Filter, ArrowDown, ArrowUp, Printer } from '@element-plus/icons-vue'
 
+
 // 状态和数据
 const activeStatus = ref('pending')
 const orders = ref([])
@@ -527,7 +528,7 @@ const filteredOrders = computed(() => {
   })
 })
 
-// 计算订单总数量
+// 算订单总数量
 const getTotalQuantity = (items) => {
   return items.reduce((total, item) => total + item.quantity, 0)
 }
@@ -814,8 +815,18 @@ const handleSelectionChange = (values) => {
 
 // 处理搜索
 const handleSearch = () => {
-  // TODO: 实现搜索功能
-  // 这里可以添加搜索逻辑
+  // 重置筛选条件
+  filterType.value = ''
+  filterValue.value = ''
+  dateRange.value = []
+  priceRange.value = {
+    min: null,
+    max: null
+  }
+  
+  // 重置分页
+  currentPage.value = 1
+  fetchOrders(true)
 }
 
 // 添加触觉反馈函数
@@ -1026,7 +1037,24 @@ const formatDate = (dateStr) => {
   }
 }
 
-// 处理筛选
+// 处理筛选类型变化
+const handleFilterTypeChange = () => {
+  // 重置筛选值
+  filterValue.value = ''
+  dateRange.value = []
+  priceRange.value = {
+    min: null,
+    max: null
+  }
+  
+  // 重置搜索框
+  searchQuery.value = ''
+  
+  // 重新获取订单列表
+  fetchOrders(true)
+}
+
+// 修改筛选处理函数
 const handleFilter = () => {
   if (filterType.value === 'total') {
     // 处理金额范围筛选
@@ -1035,26 +1063,14 @@ const handleFilter = () => {
       return
     }
   }
+  
+  // 重置搜索框
+  searchQuery.value = ''
+  
   // 重置分页
-  page.value = 1
-  noMore.value = false
+  currentPage.value = 1
+  fetchOrders(true)
 }
-
-// 重置筛选
-const resetFilter = () => {
-  filterType.value = ''
-  filterValue.value = ''
-  priceRange.value = {
-    min: null,
-    max: null
-  }
-  dateRange.value = []
-}
-
-// 监听状态变化时重置筛选
-watch(activeStatus, () => {
-  resetFilter()
-})
 
 // 修改 getDishImage 函数
 const getDishImage = (dishName) => {
@@ -1072,6 +1088,33 @@ const getDishImage = (dishName) => {
   
   // 如果没有对应的图片，返回一个默认的食物图片
   return imageMap[dishName] || 'https://img.zcool.cn/community/01311f5d54c65da801211d53231984.jpg'
+}
+
+// 添加打印处理函数
+const handlePrint = async (order) => {
+  try {
+    // TODO: 实现打印逻辑
+    const printWindow = window.open('', '_blank')
+    printWindow.document.write(`
+      <pre style="font-family: monospace; padding: 20px;">
+        订单号：${order.orderNo}
+        下单时间：${formatTime(order.createTime)}
+        客户信息：${order.studentName} (${order.studentId})
+        
+        菜品明细：
+        ${order.items.map(item => `${item.name} x${item.quantity} ¥${item.price}`).join('\n')}
+        
+        总计：¥${order.total}
+      </pre>
+    `)
+    printWindow.print()
+    printWindow.close()
+    
+    ElMessage.success('打印成功')
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('打印失败')
+  }
 }
 
 </script>
@@ -1406,6 +1449,41 @@ const getDishImage = (dishName) => {
   margin-bottom: 10px;
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  gap: 10px; /* 添加间距 */
+}
+
+.search-bar .el-input {
+  flex: 1;
+}
+
+.search-bar .el-button {
+  flex-shrink: 0;
+  min-width: 80px; /* 设置最小宽度 */
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 480px) {
+  .search-bar {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  
+  .search-bar .el-button {
+    min-width: 70px;
+    font-size: 13px;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .search-bar {
+    padding: 6px 10px;
+    gap: 6px;
+  }
+  
+  .search-bar .el-button {
+    min-width: 60px;
+    font-size: 12px;
+  }
 }
 
 /* 筛选抽屉样式 */
